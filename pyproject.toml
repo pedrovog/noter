@@ -5,6 +5,18 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "noter"
 version = "0.1.0"
+description = "Research a topic and write permanent notes to your Obsidian vault — from a single command."
+authors = [{ name = "Pedro Vogel", email = "pedro.vog@gmail.com" }]
+license = { text = "MIT" }
+keywords = ["obsidian", "zettelkasten", "research", "cli", "llm", "anthropic"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Environment :: Console",
+    "Intended Audience :: End Users/Desktop",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Utilities",
+]
 requires-python = ">=3.12"
 dependencies = [
     "anthropic>=0.49.0",
@@ -13,6 +25,10 @@ dependencies = [
     "python-dotenv>=1.0.0",
     "pydantic>=2.0",
 ]
+
+[project.urls]
+Repository = "https://github.com/pedrovog/noter"
+Issues = "https://github.com/pedrovog/noter/issues"
 
 [project.scripts]
 noter = "noter.cli:main"
