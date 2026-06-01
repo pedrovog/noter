@@ -1,0 +1,19 @@
+.venv/
+.env
+
+# Lock files
+uv.lock
+
+# Build artifacts
+dist/
+build/
+*.egg-info/
+
+# Test/lint caches
+.pytest_cache/
+.ruff_cache/
+htmlcov/
+.coverage
+
+# Vault content
+vault/
