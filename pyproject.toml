@@ -6,7 +6,7 @@ build-backend = "setuptools.build_meta"
 name = "noter"
 version = "0.1.0"
 description = "Research a topic and write permanent notes to your Obsidian vault — from a single command."
-authors = [{ name = "Pedro Vogel", email = "pedro.vog@gmail.com" }]
+authors = [{ name = "Pedro Gonçalves", email = "pedro.vog@gmail.com" }]
 license = { text = "MIT" }
 keywords = ["obsidian", "zettelkasten", "research", "cli", "llm", "anthropic"]
 classifiers = [
