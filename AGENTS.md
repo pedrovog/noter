@@ -36,6 +36,8 @@ uv run noter "topic" [OPTIONS]
   --cache-ttl INT         Cache TTL in days (default: 30)
   --no-cache              Bypass cache reads and writes
   --no-search             Skip automatic web search (use only user URLs)
+  -v, --verbose           Enable DEBUG logging
+  --version               Print version and exit
 ```
 
 ## Environment

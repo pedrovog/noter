@@ -106,7 +106,7 @@ def test_cache_hit_avoids_scraping(plan, mock_firecrawl, mock_cache, mock_extern
     mock_firecrawl.scrape.assert_not_called()
 
 
-def test_duplicate_url_warning(plan, mock_firecrawl, mock_cache, mock_external, mocker, capsys):
+def test_duplicate_url_warning(plan, mock_firecrawl, mock_cache, mock_external, mocker, caplog):
     mocker.patch(
         "noter.agents.searcher.cache.check_duplicate",
         return_value=["/vault/old-note.md"],
@@ -114,11 +114,13 @@ def test_duplicate_url_warning(plan, mock_firecrawl, mock_cache, mock_external, 
     mock_firecrawl.scrape.side_effect = None
     mock_firecrawl.scrape.return_value = _scrape_doc("https://dup.com")
 
-    run(plan, ["https://dup.com"], n_sources=0, cache_ttl=30, no_cache=False, no_search=True)
+    import logging
 
-    out = capsys.readouterr().out
-    assert "⚠" in out
-    assert "https://dup.com" in out
+    with caplog.at_level(logging.WARNING, logger="noter.agents.searcher"):
+        run(plan, ["https://dup.com"], n_sources=0, cache_ttl=30, no_cache=False, no_search=True)
+
+    assert "https://dup.com" in caplog.text
+    assert "already used" in caplog.text
 
 
 def test_one_url_failure_does_not_interrupt_search(plan, mock_firecrawl, mock_cache, mock_external):

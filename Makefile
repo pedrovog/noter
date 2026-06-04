@@ -1,4 +1,4 @@
-.PHONY: install test lint fix coverage typecheck planner search
+.PHONY: install test lint fix coverage typecheck run run-verbose planner search
 
 install:
 	uv sync
@@ -17,6 +17,14 @@ lint:
 
 fix:
 	uv run ruff check --fix src/ tests/ && uv run ruff format src/ tests/
+
+# Usage: make run topic="RAG"
+run:
+	uv run noter "$(topic)"
+
+# Usage: make run-verbose topic="RAG"
+run-verbose:
+	uv run noter "$(topic)" --verbose
 
 # Usage: make planner topic="RAG"
 planner:

@@ -80,6 +80,32 @@ def test_urls_registered_in_cache_after_writing(all_mocks):
     assert all_mocks["cache"].call_count == 2
 
 
+def test_planner_failure_logs_error_and_aborts(all_mocks, caplog):
+    all_mocks["planner"].side_effect = Exception("API error")
+    with caplog.at_level(logging.ERROR):
+        run("RAG", all_mocks["vault"], [], 5, 30, False, False)
+    assert any(r.levelno == logging.ERROR and "Planner" in r.message for r in caplog.records)
+    all_mocks["synthesizer"].assert_not_called()
+    all_mocks["writer"].assert_not_called()
+
+
+def test_synthesizer_failure_logs_error_and_aborts(all_mocks, caplog):
+    all_mocks["synthesizer"].side_effect = Exception("parse error")
+    with caplog.at_level(logging.ERROR):
+        run("RAG", all_mocks["vault"], [], 5, 30, False, False)
+    assert any(r.levelno == logging.ERROR and "Synthesizer" in r.message for r in caplog.records)
+    all_mocks["writer"].assert_not_called()
+
+
+def test_writer_failure_logs_error_and_aborts(all_mocks, caplog):
+    all_mocks["writer"].side_effect = Exception("disk full")
+    with caplog.at_level(logging.ERROR):
+        run("RAG", all_mocks["vault"], [], 5, 30, False, False)
+    assert any(r.levelno == logging.ERROR and "Writer" in r.message for r in caplog.records)
+    all_mocks["linker"].assert_not_called()
+    all_mocks["cache"].assert_not_called()
+
+
 def test_searcher_failure_propagates_error(all_mocks, caplog):
     all_mocks["searcher"].side_effect = Exception("network error")
     with caplog.at_level(logging.WARNING):
