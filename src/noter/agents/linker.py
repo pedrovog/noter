@@ -66,7 +66,9 @@ def _filter_candidates(body: str, index: dict[str, str], self_path: str) -> list
     ]
 
 
-def _detect_links(body: str, candidates: list[str], client: anthropic.Anthropic) -> list[str]:
+def _detect_links(
+    body: str, candidates: list[str], client: anthropic.Anthropic, note_name: str = ""
+) -> list[str]:
     if not candidates:
         return []
     title_list = "\n".join(f"- {t}" for t in candidates)
@@ -94,7 +96,11 @@ def _detect_links(body: str, candidates: list[str], client: anthropic.Anthropic)
             raise ValueError(f"unexpected format: {data}")
         except (JSONDecodeError, ValueError) as exc:
             if attempt == 1:
-                logger.warning("Linker: Claude returned invalid JSON after 2 attempts: %s", exc)
+                logger.warning(
+                    "Linker: Claude returned invalid JSON for note %r after 2 attempts: %s",
+                    note_name,
+                    exc,
+                )
                 return []
     return []
 
@@ -153,7 +159,7 @@ def run(note_paths: list[str], vault_path: str) -> int:
         frontmatter, body = _parse_note(content)
         candidates = _filter_candidates(body, index, str(note_path.resolve()))
         logger.debug("Linker: note %s has %d candidate(s)", note_path.name, len(candidates))
-        titles_to_link = _detect_links(body, candidates, client)
+        titles_to_link = _detect_links(body, candidates, client, note_name=note_path.name)
 
         if not titles_to_link:
             continue

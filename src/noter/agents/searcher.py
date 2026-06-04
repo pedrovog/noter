@@ -72,19 +72,19 @@ def _track_a(
             try:
                 results.extend(future.result())
             except Exception as exc:
-                logger.warning("Firecrawl search failed: %s", exc)
+                logger.warning("Firecrawl search failed: %s", exc, exc_info=True)
 
         try:
             results.extend(arxiv_future.result())
         except Exception as exc:
-            logger.warning("arXiv search failed: %s", exc)
+            logger.warning("arXiv search failed for %r: %s", first_query, exc, exc_info=True)
 
         try:
             wiki = wiki_future.result()
             if wiki:
                 results.append(wiki)
         except Exception as exc:
-            logger.warning("Wikipedia fetch failed for %r: %s", plan.main_title, exc)
+            logger.warning("Wikipedia fetch failed for %r: %s", plan.main_title, exc, exc_info=True)
 
     # Deduplicate by URL and enforce n_sources limit
     if n_sources <= 0:
@@ -138,7 +138,7 @@ def _track_b(
             logger.debug("Scraped %s (%d chars)", url, len(content))
             results.append(SourceResult(url=url, title=title, content=content, source="user"))
         except Exception as exc:
-            logger.warning("Failed to scrape %s: %s", url, exc)
+            logger.warning("Failed to scrape %s: %s", url, exc, exc_info=True)
 
     return results
 
@@ -149,12 +149,7 @@ def _firecrawl_search(
     cache_ttl: int,
     no_cache: bool,
 ) -> list[SourceResult]:
-    try:
-        data = app.search(query, limit=3, scrape_options=ScrapeOptions(formats=["markdown"]))
-    except Exception as exc:
-        logger.warning("Firecrawl search %r failed: %s", query, exc)
-        return []
-
+    data = app.search(query, limit=3, scrape_options=ScrapeOptions(formats=["markdown"]))
     results: list[SourceResult] = []
     for item in getattr(data, "web", None) or []:
         # Support both SearchResultWeb (url attr) and Document (metadata.url)
@@ -197,7 +192,7 @@ def _parse_arxiv_xml(xml_content: str, from_cache: bool) -> list[SourceResult]:
     try:
         root = ET.fromstring(xml_content)
     except ET.ParseError as exc:
-        logger.warning("arXiv XML parse failed: %s", exc)
+        logger.warning("arXiv XML parse failed: %s", exc, exc_info=True)
         return []
 
     results: list[SourceResult] = []
@@ -229,13 +224,9 @@ def _arxiv_search(query: str, cache_ttl: int, no_cache: bool) -> list[SourceResu
             logger.debug("Cache hit (arXiv): %r", query)
             return _parse_arxiv_xml(cached_xml, from_cache=True)
 
-    try:
-        req = urllib.request.Request(api_url, headers={"User-Agent": "noter/1.0"})
-        with urllib.request.urlopen(req, timeout=10) as resp:
-            xml_content = resp.read().decode("utf-8")
-    except Exception as exc:
-        logger.warning("arXiv request failed: %s", exc)
-        return []
+    req = urllib.request.Request(api_url, headers={"User-Agent": "noter/1.0"})
+    with urllib.request.urlopen(req, timeout=10) as resp:
+        xml_content = resp.read().decode("utf-8")
 
     if not no_cache:
         cache.save_cache(api_url, xml_content)
@@ -256,13 +247,9 @@ def _wikipedia_fetch(topic: str, cache_ttl: int, no_cache: bool) -> SourceResult
                 url=page_url, title=topic, content=cached, source="auto", from_cache=True
             )
 
-    try:
-        req = urllib.request.Request(api_url, headers={"User-Agent": "noter/1.0"})
-        with urllib.request.urlopen(req, timeout=10) as resp:
-            data = json.loads(resp.read().decode("utf-8"))
-    except Exception as exc:
-        logger.warning("Wikipedia request failed for %r: %s", topic, exc)
-        return None
+    req = urllib.request.Request(api_url, headers={"User-Agent": "noter/1.0"})
+    with urllib.request.urlopen(req, timeout=10) as resp:
+        data = json.loads(resp.read().decode("utf-8"))
 
     if data.get("type") == "disambiguation" or not data.get("extract"):
         return None

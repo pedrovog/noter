@@ -1,4 +1,5 @@
 import json
+import logging
 from unittest.mock import MagicMock, patch
 
 import anthropic
@@ -108,9 +109,14 @@ def test_retry_succeeds_on_second_attempt(mock_anthropic):
     assert mock_anthropic.messages.create.call_count == 2
 
 
-def test_null_response_drops_note_silently(mock_anthropic):
+def test_null_response_drops_note_silently(mock_anthropic, caplog):
     null_msg = MagicMock()
     null_msg.content = [anthropic.types.TextBlock(type="text", text="null")]
     mock_anthropic.messages.create.return_value = null_msg
-    results = run(_SIMPLE_PLAN, [_make_source()])
+    with caplog.at_level(logging.WARNING, logger="noter.agents.synthesizer"):
+        results = run(_SIMPLE_PLAN, [_make_source()])
     assert results == []
+    assert any(
+        r.levelno == logging.WARNING and "insufficient source content" in r.message
+        for r in caplog.records
+    )

@@ -6,6 +6,7 @@ import typer
 
 from noter import cache
 from noter.agents import linker, planner, searcher, synthesizer, writer
+from noter.schemas import SynthesizedNote
 
 logger = logging.getLogger(__name__)
 
@@ -66,6 +67,7 @@ def run(
 
     # Synthesizer
     t0 = time.perf_counter()
+    synth_notes: list[SynthesizedNote] = []
     try:
         _progress("[Synthesizer]  Synthesizing...", quiet)
         synth_notes = synthesizer.run(plan, sources)
@@ -81,7 +83,13 @@ def run(
                 "Synthesizer dropped %d note(s) for insufficient source content", dropped
             )
     except Exception as exc:
-        logger.error("[Synthesizer] failed, aborting run: %s", exc, exc_info=True)
+        logger.error(
+            "[Synthesizer] failed after %d/%d note(s), aborting run: %s",
+            len(synth_notes),
+            len(plan.notes),
+            exc,
+            exc_info=True,
+        )
         return
 
     # Writer
@@ -108,8 +116,11 @@ def run(
 
     # Register URL usage in cache
     if not no_cache:
-        for source in sources:
-            for note_path in note_paths:
-                cache.register_usage(source.url, note_path)
+        try:
+            for source in sources:
+                for note_path in note_paths:
+                    cache.register_usage(source.url, note_path)
+        except Exception as exc:
+            logger.warning("Failed to register URL usage in cache: %s", exc, exc_info=True)
 
     _progress(f"\nDone. {len(note_paths)} note(s) in 00 - Inbox/ awaiting review.", quiet)

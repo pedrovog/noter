@@ -63,7 +63,7 @@ def research(
         for name in _THIRD_PARTY_LOGGERS:
             logging.getLogger(name).setLevel(logging.WARNING)
     elif quiet:
-        root.setLevel(logging.ERROR)
+        root.setLevel(logging.WARNING)
 
     if sources < 1:
         typer.echo("--sources must be >= 1", err=True)
