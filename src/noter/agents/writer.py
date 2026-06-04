@@ -102,9 +102,7 @@ def _render_note(note: SynthesizedNote, tags: list[str], created: str) -> str:
     )
 
 
-def run(
-    synth_notes: list[SynthesizedNote], vault_path: str, inbox: str = "00 - Inbox"
-) -> list[str]:
+def run(synth_notes: list[SynthesizedNote], vault_path: str, inbox: str = "inbox") -> list[str]:
     inbox_dir = Path(vault_path) / inbox
     inbox_dir.mkdir(parents=True, exist_ok=True)
     client = anthropic.Anthropic()

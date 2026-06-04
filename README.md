@@ -66,7 +66,7 @@ Copy `.env.example` to `.env` and fill in the required values.
 
 | Variable | Default | Description |
 |---|---|---|
-| `NOTER_INBOX` | `00 - Inbox` | Vault subfolder where new notes are written |
+| `NOTER_INBOX` | `inbox` | Vault subfolder where new notes are written |
 
 ### Optional — Per-Agent Model Overrides
 
@@ -97,7 +97,7 @@ uv run noter "TOPIC"
 | `--cache-ttl N` | `30` | Cache time-to-live in days |
 | `--no-search` | off | Skip automatic web search; only scrape URLs from `--source` / `--source-file` |
 | `--no-cache` | off | Bypass cache reads and writes for this run |
-| `--inbox TEXT` | `00 - Inbox` | Vault subfolder for new notes (overrides `NOTER_INBOX`) |
+| `--inbox TEXT` | `inbox` | Vault subfolder for new notes (overrides `NOTER_INBOX`) |
 | `--verbose`, `-v` | off | Enable DEBUG logging |
 | `--quiet`, `-q` | off | Suppress progress output (warnings and errors still shown) |
 

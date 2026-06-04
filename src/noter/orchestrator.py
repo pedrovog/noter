@@ -24,7 +24,7 @@ def run(
     cache_ttl: int,
     no_cache: bool,
     no_search: bool,
-    inbox: str = "00 - Inbox",
+    inbox: str = "inbox",
     quiet: bool = False,
 ) -> None:
     # Planner
