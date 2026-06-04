@@ -259,7 +259,6 @@ These are intentional constraints, not missing features:
 | SQLite only — no Redis, no Postgres | No external services required |
 | Write-once to `00 - Inbox/` — no editing existing notes | Notes are for human review; automated overwriting is out of scope |
 | No streaming LLM responses | Batch pipeline; all Claude output is structured JSON |
-| Claude via Anthropic SDK only | No OpenAI, no local models |
 | Firecrawl only for scraping | No Playwright, Selenium, or custom crawlers |
 | No semantic search or vector embeddings | Out of scope |
 | No scheduling or daemon mode | Invoked manually per topic |
