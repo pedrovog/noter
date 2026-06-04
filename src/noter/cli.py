@@ -8,10 +8,12 @@ from typing import Optional
 import typer
 from dotenv import load_dotenv
 
-from noter import orchestrator
-from noter.config import INBOX_SUBFOLDER
-
+# Load .env before importing noter modules: config.py reads NOTER_* env vars at
+# import time, so dotenv must populate the environment first.
 load_dotenv()
+
+from noter import orchestrator  # noqa: E402
+from noter.config import INBOX_SUBFOLDER  # noqa: E402
 
 logger = logging.getLogger(__name__)
 
