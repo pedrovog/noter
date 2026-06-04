@@ -4,6 +4,12 @@
   <img src="assets/noter.png" alt="noter logo" width="180" />
 </p>
 
+<p align="center">
+  <a href="https://github.com/pedrovog/noter/actions/workflows/ci.yml"><img src="https://github.com/pedrovog/noter/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+  <a href="https://www.python.org/downloads/"><img src="https://img.shields.io/badge/python-3.12-blue" alt="Python 3.12"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-green" alt="MIT License"></a>
+</p>
+
 > Research a topic and write permanent notes to your Obsidian vault — from a single command.
 
 ## What It Does

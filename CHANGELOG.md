@@ -14,6 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `pytest-cov` dev dependency; `--cov=noter --cov-report=term-missing` added to default pytest options; `make coverage` target added
 - `mypy` dev dependency with `strict = true`; `[tool.mypy]` config in `pyproject.toml`; `make typecheck` target added; all type errors fixed across agents and cache
 - `tests/conftest.py` — `reset_connections` autouse fixture moved here from `test_cache.py` so it's available to all test modules
+- README badge row: CI status, Python 3.12, MIT license
 - `--version` flag: prints `noter <version>` via `importlib.metadata` and exits
 - `--verbose` / `-v` flag: sets log level to DEBUG for tracing sources, cache hits, etc.
 - `--quiet` / `-q` flag: suppresses progress output, keeps WARNING+ visible (not ERROR-only)
