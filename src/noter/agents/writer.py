@@ -102,9 +102,9 @@ def _render_note(note: SynthesizedNote, tags: list[str], created: str) -> str:
     )
 
 
-def run(synth_notes: list[SynthesizedNote], vault_path: str) -> list[str]:
-    inbox = Path(vault_path) / "00 - Inbox"
-    inbox.mkdir(parents=True, exist_ok=True)
+def run(synth_notes: list[SynthesizedNote], vault_path: str, inbox: str = "noter") -> list[str]:
+    inbox_dir = Path(vault_path) / inbox
+    inbox_dir.mkdir(parents=True, exist_ok=True)
     client = anthropic.Anthropic()
     created = date.today().isoformat()
     paths = []
@@ -113,7 +113,7 @@ def run(synth_notes: list[SynthesizedNote], vault_path: str) -> list[str]:
         logger.debug("Writer: rendering note %r", note.note_title)
         tags = _infer_tags(note, client)
         name = _sanitize(note.note_title)
-        path = _resolve_path(inbox, name)
+        path = _resolve_path(inbox_dir, name)
         if path.name != f"{name}.md":
             logger.debug("Writer: filename %r exists, using %r", f"{name}.md", path.name)
         content = _render_note(note, tags, created)
