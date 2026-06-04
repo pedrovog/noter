@@ -14,8 +14,12 @@ uv add --dev <package>           # add dev dependency
 
 # Makefile shortcuts
 make test                        # uv run pytest -v
+make coverage                    # pytest with coverage + HTML report
+make typecheck                   # uv run mypy src/noter/
 make lint                        # ruff check only
 make fix                         # ruff check --fix + format
+make run topic="RAG"             # uv run noter "RAG" --sources 5
+make run-verbose topic="RAG"     # run with --verbose --sources 2
 make planner topic="RAG"         # test planner against real API
 make search topic="RAG"          # test planner → searcher against real APIs
 ```
@@ -36,6 +40,8 @@ uv run noter "topic" [OPTIONS]
   --cache-ttl INT         Cache TTL in days (default: 30)
   --no-cache              Bypass cache reads and writes
   --no-search             Skip automatic web search (use only user URLs)
+  --inbox TEXT            Vault subfolder for new notes (default: noter)
+  -q, --quiet             Suppress progress output
   -v, --verbose           Enable DEBUG logging
   --version               Print version and exit
 ```
@@ -49,6 +55,12 @@ Copy `.env.example` → `.env` and fill in:
 | `ANTHROPIC_API_KEY` | Claude API |
 | `FIRECRAWL_API_KEY` | Web scraping |
 | `VAULT_PATH` | Absolute path to Obsidian vault root |
+
+Output folder (optional):
+
+| Variable | Default | Purpose |
+|---|---|---|
+| `NOTER_INBOX` | `noter` | Vault subfolder where new notes are written |
 
 Model overrides (optional, all default to `claude-sonnet-4-6`):
 
@@ -64,16 +76,16 @@ SQLite cache lives at `~/.pesquisa/cache.db` (created automatically).
 
 ## Architecture
 
-noter is a CLI pipeline: research a topic → write permanent notes to `VAULT_PATH/00 - Inbox/`.
+noter is a CLI pipeline: research a topic → write permanent notes to `VAULT_PATH/<inbox>/`.
 
 ```
 cli.py
-  └─ orchestrator.run(topic, vault_path, user_urls, n_sources, cache_ttl, no_cache, no_search)
-       ├─ planner.run(topic)               → PlannerOutput
-       ├─ searcher.run(plan, user_urls, …) → list[SourceResult]
-       ├─ synthesizer.run(plan, sources)   → list[SynthesizedNote]
-       ├─ writer.run(synth_notes, vault)   → list[str]   # absolute paths
-       └─ linker.run(note_paths, vault)    → int         # links injected
+  └─ orchestrator.run(topic, vault_path, user_urls, n_sources, cache_ttl, no_cache, no_search, inbox, quiet)
+       ├─ planner.run(topic)                      → PlannerOutput
+       ├─ searcher.run(plan, user_urls, …)         → list[SourceResult]
+       ├─ synthesizer.run(plan, sources)           → list[SynthesizedNote]
+       ├─ writer.run(synth_notes, vault, inbox)    → list[str]   # absolute paths
+       └─ linker.run(note_paths, vault)            → int         # links injected
 ```
 
 **Agents** (`src/noter/agents/`) are plain modules — a `run()` function, no classes.
@@ -83,7 +95,7 @@ cli.py
 ### Key modules
 
 - `schemas.py` — Pydantic v2 models shared across the pipeline: `NoteSpec`, `PlannerOutput`, `SourceResult`, `SubtopicContent`, `SourceRef`, `SynthesizedNote`
-- `config.py` — Claude model selection; reads `NOTER_*_MODEL` env vars with `claude-sonnet-4-6` as global default
+- `config.py` — model selection (`NOTER_*_MODEL` env vars, default `claude-sonnet-4-6`) and `INBOX_SUBFOLDER` (default `noter`)
 - `cache.py` — SQLite, two tables: `scrape_cache` (URL → markdown, TTL-based) and `url_usage` (URL → note path, for duplicate warnings). Uses a module-level `_connections` dict to keep `:memory:` connections alive across calls.
 - `exceptions.py` — `PlannerError`, `SearcherError`, `SynthesizerError`, `WriterError`, `LinkerError`
 
