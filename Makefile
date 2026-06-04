@@ -1,10 +1,13 @@
-.PHONY: install test lint fix planner search
+.PHONY: install test lint fix coverage planner search
 
 install:
 	uv sync
 
 test:
 	uv run pytest -v
+
+coverage:
+	uv run pytest --cov=noter --cov-report=term-missing --cov-report=html
 
 lint:
 	uv run ruff check src/ tests/

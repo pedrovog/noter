@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `.github/workflows/ci.yml` — CI pipeline running `ruff check` and `pytest` on every push and PR
 - `.pre-commit-config.yaml` — pre-commit hooks for `ruff check --fix` and `ruff-format`
 - `LICENSE` — MIT license; README updated accordingly
+- `pytest-cov` dev dependency; `--cov=noter --cov-report=term-missing` added to default pytest options; `make coverage` target added
 
 ## [0.1.0] - 2026-06-03
 
