@@ -2,7 +2,7 @@ import os
 
 DEFAULT_MODEL = os.environ.get("NOTER_MODEL", "claude-sonnet-4-6")
 
-INBOX_SUBFOLDER = os.environ.get("NOTER_INBOX", "inbox")
+INBOX_SUBFOLDER = os.environ.get("NOTER_INBOX", "noter")
 
 # Per-agent overrides — fall back to DEFAULT_MODEL if not set
 PLANNER_MODEL = os.environ.get("NOTER_PLANNER_MODEL", DEFAULT_MODEL)

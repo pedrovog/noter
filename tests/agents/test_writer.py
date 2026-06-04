@@ -41,7 +41,7 @@ def mock_anthropic():
 def test_correct_frontmatter(mock_anthropic, tmp_path):
     mock_anthropic.messages.create.return_value = _mock_tags(["rag", "ai", "nlp"])
     run([_make_note()], str(tmp_path))
-    content = (tmp_path / "inbox" / "RAG Architecture.md").read_text()
+    content = (tmp_path / "noter" / "RAG Architecture.md").read_text()
     assert "type: permanent" in content
     assert "created: " in content
     assert "tags: [rag, ai, nlp]" in content
@@ -51,12 +51,12 @@ def test_correct_frontmatter(mock_anthropic, tmp_path):
 def test_filename_sanitization(mock_anthropic, tmp_path):
     mock_anthropic.messages.create.return_value = _mock_tags()
     run([_make_note(title="Atenção: RAG!")], str(tmp_path))
-    assert (tmp_path / "inbox" / "Atencao RAG.md").exists()
+    assert (tmp_path / "noter" / "Atencao RAG.md").exists()
 
 
 def test_numeric_suffix_when_file_exists(mock_anthropic, tmp_path):
     mock_anthropic.messages.create.return_value = _mock_tags()
-    inbox = tmp_path / "inbox"
+    inbox = tmp_path / "noter"
     inbox.mkdir(parents=True)
     (inbox / "RAG Architecture.md").write_text("existing")
     run([_make_note()], str(tmp_path))
@@ -67,7 +67,7 @@ def test_numeric_suffix_when_file_exists(mock_anthropic, tmp_path):
 def test_required_sections_present(mock_anthropic, tmp_path):
     mock_anthropic.messages.create.return_value = _mock_tags()
     run([_make_note()], str(tmp_path))
-    content = (tmp_path / "inbox" / "RAG Architecture.md").read_text()
+    content = (tmp_path / "noter" / "RAG Architecture.md").read_text()
     assert "## Core Concept" in content
     assert "## Subtopics" in content
     assert "## Connections" in content
@@ -81,7 +81,7 @@ def test_sources_listed_correctly(mock_anthropic, tmp_path):
         SourceRef(url="https://b.com", title="Paper B"),
     ]
     run([_make_note(sources=sources)], str(tmp_path))
-    content = (tmp_path / "inbox" / "RAG Architecture.md").read_text()
+    content = (tmp_path / "noter" / "RAG Architecture.md").read_text()
     assert "- [Paper A](https://a.com)" in content
     assert "- [Paper B](https://b.com)" in content
 
@@ -89,7 +89,7 @@ def test_sources_listed_correctly(mock_anthropic, tmp_path):
 def test_default_inbox_unchanged(mock_anthropic, tmp_path):
     mock_anthropic.messages.create.return_value = _mock_tags()
     run([_make_note()], str(tmp_path))
-    assert (tmp_path / "inbox" / "RAG Architecture.md").exists()
+    assert (tmp_path / "noter" / "RAG Architecture.md").exists()
 
 
 def test_writes_to_custom_inbox(mock_anthropic, tmp_path):
