@@ -1,5 +1,9 @@
 # noter
 
+<p align="center">
+  <img src="assets/noter.png" alt="noter logo" width="180" />
+</p>
+
 > Research a topic and write permanent notes to your Obsidian vault — from a single command.
 
 ## What It Does
