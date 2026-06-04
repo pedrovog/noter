@@ -12,9 +12,14 @@ from noter import orchestrator
 
 load_dotenv()
 
+logger = logging.getLogger(__name__)
+
 app = typer.Typer()
 
 _URL_RE = re.compile(r"^https?://")
+
+_VERBOSE_FMT = "%(asctime)s %(threadName)-10s %(name)-28s %(levelname)-7s %(message)s"
+_THIRD_PARTY_LOGGERS = ("httpx", "httpcore", "anthropic", "urllib3", "firecrawl")
 
 
 def _version_callback(value: bool) -> None:
@@ -44,20 +49,26 @@ def research(
     cache_ttl: int = typer.Option(30, "--cache-ttl", help="Cache TTL in days"),
     no_cache: bool = typer.Option(False, "--no-cache", help="Bypass cache reads and writes"),
     verbose: bool = typer.Option(False, "--verbose", "-v", help="Enable debug logging"),
+    quiet: bool = typer.Option(False, "--quiet", "-q", help="Suppress progress output"),
     _version: Optional[bool] = typer.Option(
         None, "--version", callback=_version_callback, is_eager=True, help="Show version and exit"
     ),
 ) -> None:
     """Research a topic and generate a note in the Obsidian vault."""
+    root = logging.getLogger()
     if verbose:
-        logging.getLogger().setLevel(logging.DEBUG)
+        root.setLevel(logging.DEBUG)
+        for h in root.handlers:
+            h.setFormatter(logging.Formatter(_VERBOSE_FMT, datefmt="%H:%M:%S"))
+        for name in _THIRD_PARTY_LOGGERS:
+            logging.getLogger(name).setLevel(logging.WARNING)
+    elif quiet:
+        root.setLevel(logging.ERROR)
 
-    # Validate --sources
     if sources < 1:
         typer.echo("--sources must be >= 1", err=True)
         raise typer.Exit(code=1)
 
-    # Validate VAULT_PATH
     vault_path = os.environ.get("VAULT_PATH", "")
     if not vault_path or not Path(vault_path).is_dir():
         typer.echo(
@@ -66,7 +77,6 @@ def research(
         )
         raise typer.Exit(code=1)
 
-    # Collect URLs from --source-file
     file_urls: list[str] = []
     if source_file:
         p = Path(source_file)
@@ -77,6 +87,16 @@ def research(
 
     user_urls = _validate_urls(list(source) + file_urls)
 
+    logger.info(
+        "Starting research: topic=%r sources=%d cache_ttl=%d no_cache=%s no_search=%s user_urls=%d",
+        topic,
+        sources,
+        cache_ttl,
+        no_cache,
+        no_search,
+        len(user_urls),
+    )
+
     orchestrator.run(
         topic=topic,
         vault_path=vault_path,
@@ -85,6 +105,7 @@ def research(
         cache_ttl=cache_ttl,
         no_cache=no_cache,
         no_search=no_search,
+        quiet=quiet,
     )
 
 

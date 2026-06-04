@@ -98,6 +98,12 @@ def _track_a(
             if len(limited) >= n_sources:
                 break
 
+    logger.debug(
+        "Searcher track A: %d raw result(s) → %d after dedup/limit(%d)",
+        len(results),
+        len(limited),
+        n_sources,
+    )
     return limited
 
 
@@ -113,11 +119,12 @@ def _track_b(
         prior_notes = cache.check_duplicate(url)
         if prior_notes:
             titles = ", ".join(f"[[{p}]]" for p in prior_notes)
-            print(f"⚠ {url} already used in {titles}")
+            logger.warning("%s already used in %s", url, titles)
 
         if not no_cache:
             cached = cache.get_cached(url, cache_ttl)
             if cached:
+                logger.debug("Cache hit (user): %s", url)
                 results.append(
                     SourceResult(url=url, title=url, content=cached, source="user", from_cache=True)
                 )
@@ -128,6 +135,7 @@ def _track_b(
             content = getattr(doc, "markdown", None) or ""
             meta = getattr(doc, "metadata", None)
             title = (getattr(meta, "title", None) if meta else None) or url
+            logger.debug("Scraped %s (%d chars)", url, len(content))
             results.append(SourceResult(url=url, title=title, content=content, source="user"))
         except Exception as exc:
             logger.warning("Failed to scrape %s: %s", url, exc)
@@ -165,6 +173,7 @@ def _firecrawl_search(
                     or (getattr(meta, "title", None) if meta else None)
                     or url
                 )
+                logger.debug("Cache hit (auto): %s", url)
                 results.append(
                     SourceResult(
                         url=url, title=title, content=cached, source="auto", from_cache=True
@@ -179,6 +188,7 @@ def _firecrawl_search(
         )
         results.append(SourceResult(url=url, title=title, content=content, source="auto"))
 
+    logger.debug("Firecrawl search %r returned %d result(s)", query, len(results))
     return results
 
 
@@ -216,6 +226,7 @@ def _arxiv_search(query: str, cache_ttl: int, no_cache: bool) -> list[SourceResu
     if not no_cache:
         cached_xml = cache.get_cached(api_url, cache_ttl)
         if cached_xml is not None:
+            logger.debug("Cache hit (arXiv): %r", query)
             return _parse_arxiv_xml(cached_xml, from_cache=True)
 
     try:
@@ -240,6 +251,7 @@ def _wikipedia_fetch(topic: str, cache_ttl: int, no_cache: bool) -> SourceResult
     if not no_cache:
         cached = cache.get_cached(page_url, cache_ttl)
         if cached:
+            logger.debug("Cache hit (Wikipedia): %r", topic)
             return SourceResult(
                 url=page_url, title=topic, content=cached, source="auto", from_cache=True
             )

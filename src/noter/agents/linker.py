@@ -139,6 +139,7 @@ def run(note_paths: list[str], vault_path: str) -> int:
     except OSError as exc:
         raise LinkerError(f"Failed to build vault index: {exc}") from exc
 
+    logger.debug("Linker: indexed %d vault note(s)", len(index))
     client = anthropic.Anthropic()
     total = 0
 
@@ -151,6 +152,7 @@ def run(note_paths: list[str], vault_path: str) -> int:
 
         frontmatter, body = _parse_note(content)
         candidates = _filter_candidates(body, index, str(note_path.resolve()))
+        logger.debug("Linker: note %s has %d candidate(s)", note_path.name, len(candidates))
         titles_to_link = _detect_links(body, candidates, client)
 
         if not titles_to_link:
@@ -158,6 +160,7 @@ def run(note_paths: list[str], vault_path: str) -> int:
 
         updated_body, count = _inject_links(body, titles_to_link)
         updated_body = _fill_connections(updated_body, titles_to_link)
+        logger.debug("Linker: %s → %d link(s): %s", note_path.name, count, titles_to_link)
 
         try:
             note_path.write_text(frontmatter + updated_body, encoding="utf-8")

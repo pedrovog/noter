@@ -1,4 +1,5 @@
 import json
+import logging
 from json import JSONDecodeError
 
 import anthropic
@@ -7,6 +8,8 @@ from pydantic import ValidationError
 from noter.config import SYNTHESIZER_MODEL
 from noter.exceptions import SynthesizerError
 from noter.schemas import NoteSpec, PlannerOutput, SourceResult, SynthesizedNote
+
+logger = logging.getLogger(__name__)
 
 _TOKEN_LIMIT_PER_SOURCE = 3000
 _WORDS_PER_TOKEN = 1.3
@@ -81,6 +84,12 @@ def run(plan: PlannerOutput, sources: list[SourceResult]) -> list[SynthesizedNot
 
     for note_spec in plan.notes:
         user_message = _build_user_message(note_spec, sources)
+        logger.debug(
+            "Synthesizer: note %r, %d candidate source(s), prompt ~%d chars",
+            note_spec.title,
+            len(sources),
+            len(user_message),
+        )
         synthesized = None
 
         for attempt in range(2):
@@ -103,8 +112,18 @@ def run(plan: PlannerOutput, sources: list[SourceResult]) -> list[SynthesizedNot
                         f"Synthesizer returned invalid output for '{note_spec.title}' "
                         f"after 2 attempts: {exc}"
                     ) from exc
+                logger.debug(
+                    "Synthesizer: note %r attempt %d failed, retrying: %s",
+                    note_spec.title,
+                    attempt + 1,
+                    exc,
+                )
 
         if synthesized is not None:
             results.append(synthesized)
+        else:
+            logger.warning(
+                "Synthesizer: insufficient source content for note %r — skipping", note_spec.title
+            )
 
     return results

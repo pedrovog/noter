@@ -15,6 +15,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `mypy` dev dependency with `strict = true`; `[tool.mypy]` config in `pyproject.toml`; `make typecheck` target added; all type errors fixed across agents and cache
 - `--version` flag: prints `noter <version>` via `importlib.metadata` and exits
 - `--verbose` / `-v` flag: sets log level to DEBUG for tracing sources, cache hits, etc.
+- `--quiet` / `-q` flag: suppresses progress output, shows only errors
+
+### Changed
+- Logging overhauled across the pipeline: `DEBUG` statements added to all agents (retry attempts, cache hits, timings, per-note detail); fatal stage failures now log `ERROR` with traceback; synthesizer silently-dropped notes now log `WARNING`; duplicate-URL `print` in searcher converted to `logger.warning`; verbose mode swaps to a richer format with timestamp, thread name, and module name; third-party loggers (`httpx`, `httpcore`, `anthropic`, `urllib3`, `firecrawl`) clamped to `WARNING` in verbose mode; progress output routed through `_progress()` helper respecting `--quiet`
 
 ## [0.1.0] - 2026-06-03
 

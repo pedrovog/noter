@@ -1,4 +1,5 @@
 import json
+import logging
 import os
 
 import anthropic
@@ -6,6 +7,8 @@ import anthropic
 from noter.config import PLANNER_MODEL
 from noter.exceptions import PlannerError
 from noter.schemas import PlannerOutput
+
+logger = logging.getLogger(__name__)
 
 _SYSTEM_PROMPT = """\
 You are a research planning assistant. Analyze the given topic and decide how to \
@@ -46,6 +49,7 @@ def run(topic: str) -> PlannerOutput:
     Raises:
         PlannerError: if Claude returns invalid JSON after one retry.
     """
+    logger.debug("Planner: requesting plan for topic=%r model=%s", topic, PLANNER_MODEL)
     client = anthropic.Anthropic(api_key=os.environ.get("ANTHROPIC_API_KEY"))
 
     for attempt in range(2):
@@ -63,11 +67,18 @@ def run(topic: str) -> PlannerOutput:
         if start != -1 and end != -1:
             raw = raw[start : end + 1]
         try:
-            return PlannerOutput.model_validate(json.loads(raw))
+            result = PlannerOutput.model_validate(json.loads(raw))
+            logger.debug(
+                "Planner: parsed %d note(s), %d search queries",
+                len(result.notes),
+                len(result.search_queries),
+            )
+            return result
         except Exception as exc:
             if attempt == 1:
                 raise PlannerError(
                     f"Planner returned invalid output after 2 attempts: {exc}"
                 ) from exc
+            logger.debug("Planner: attempt %d failed to parse, retrying: %s", attempt + 1, exc)
 
     raise PlannerError("Planner failed")  # unreachable; satisfies type checker
