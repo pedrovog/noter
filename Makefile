@@ -20,11 +20,11 @@ fix:
 
 # Usage: make run topic="RAG"
 run:
-	uv run noter "$(topic)"
+	uv run noter "$(topic)" --sources 5
 
 # Usage: make run-verbose topic="RAG"
 run-verbose:
-	uv run noter "$(topic)" --verbose
+	uv run noter "$(topic)" --verbose --sources 2
 
 # Usage: make planner topic="RAG"
 planner:
