@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - `.github/workflows/ci.yml` — CI pipeline running `ruff check` and `pytest` on every push and PR
 - `.pre-commit-config.yaml` — pre-commit hooks for `ruff check --fix` and `ruff-format`
+- `LICENSE` — MIT license; README updated accordingly
 
 ## [0.1.0] - 2026-06-03
 

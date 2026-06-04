@@ -254,4 +254,4 @@ These are intentional constraints, not missing features:
 
 ## License
 
-Personal use. No license applied.
+MIT — see [LICENSE](LICENSE).
