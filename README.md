@@ -39,7 +39,7 @@ Each generated note includes a YAML frontmatter block, a structured body organiz
 ## Installation
 
 ```bash
-git clone https://github.com/you/noter.git
+git clone https://github.com/pedrovog/noter.git
 cd noter
 uv sync
 cp .env.example .env
@@ -91,6 +91,8 @@ uv run noter "TOPIC"
 | `--cache-ttl N` | `30` | Cache time-to-live in days |
 | `--no-search` | off | Skip automatic web search; only scrape URLs from `--source` / `--source-file` |
 | `--no-cache` | off | Bypass cache reads and writes for this run |
+| `--verbose`, `-v` | off | Enable DEBUG logging |
+| `--quiet`, `-q` | off | Suppress progress output (warnings and errors still shown) |
 
 ### Examples
 
@@ -146,7 +148,7 @@ noter is a sequential pipeline of five independent agents. The orchestrator is t
 
 ```
 cli.py
-  └─ orchestrator.run(topic, vault_path, user_urls, n_sources, cache_ttl, no_cache, no_search)
+  └─ orchestrator.run(topic, vault_path, user_urls, n_sources, cache_ttl, no_cache, no_search, quiet)
        ├─ planner.run(topic)               → PlannerOutput
        ├─ searcher.run(plan, user_urls, …) → list[SourceResult]
        ├─ synthesizer.run(plan, sources)   → list[SynthesizedNote]
@@ -230,8 +232,12 @@ make search topic="RAG"     # runs Planner + Searcher, prints SourceResult list 
 |---|---|
 | `make install` | `uv sync` — install all dependencies |
 | `make test` | `uv run pytest -v` — full test suite |
+| `make coverage` | pytest with coverage report and HTML output |
+| `make typecheck` | `uv run mypy src/noter/` — strict type checking |
 | `make lint` | `ruff check src/ tests/` — lint only, no writes |
 | `make fix` | `ruff check --fix` + `ruff format` — fix and format |
+| `make run topic="…"` | `uv run noter "$(topic)"` — run noter |
+| `make run-verbose topic="…"` | Run noter with `--verbose` flag |
 | `make planner topic="…"` | Run Planner against the real API, print JSON |
 | `make search topic="…"` | Run Planner + Searcher against real APIs, print JSON |
 
