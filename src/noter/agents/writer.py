@@ -74,7 +74,7 @@ def _infer_tags(note: SynthesizedNote, client: anthropic.Anthropic) -> list[str]
 
 
 def _yaml_str(value: str) -> str:
-    return value.replace("\\", "\\\\").replace('"', '\\"')
+    return value.replace("\\", "\\\\").replace('"', '\\"').replace("\n", "\\n").replace("\r", "\\r")
 
 
 def _render_note(note: SynthesizedNote, tags: list[str], created: str) -> str:
