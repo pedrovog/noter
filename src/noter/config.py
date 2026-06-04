@@ -1,7 +1,8 @@
 import os
 
-# Global default — override with NOTER_MODEL env var
 DEFAULT_MODEL = os.environ.get("NOTER_MODEL", "claude-sonnet-4-6")
+
+INBOX_SUBFOLDER = os.environ.get("NOTER_INBOX", "00 - Inbox")
 
 # Per-agent overrides — fall back to DEFAULT_MODEL if not set
 PLANNER_MODEL = os.environ.get("NOTER_PLANNER_MODEL", DEFAULT_MODEL)

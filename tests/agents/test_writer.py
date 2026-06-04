@@ -86,6 +86,18 @@ def test_sources_listed_correctly(mock_anthropic, tmp_path):
     assert "- [Paper B](https://b.com)" in content
 
 
+def test_default_inbox_unchanged(mock_anthropic, tmp_path):
+    mock_anthropic.messages.create.return_value = _mock_tags()
+    run([_make_note()], str(tmp_path))
+    assert (tmp_path / "00 - Inbox" / "RAG Architecture.md").exists()
+
+
+def test_writes_to_custom_inbox(mock_anthropic, tmp_path):
+    mock_anthropic.messages.create.return_value = _mock_tags()
+    run([_make_note()], str(tmp_path), inbox="Notes/Drafts")
+    assert (tmp_path / "Notes" / "Drafts" / "RAG Architecture.md").exists()
+
+
 def test_tag_inference_failure_raises_writer_error(mock_anthropic, tmp_path):
     mock_anthropic.messages.create.return_value = MagicMock(
         content=[anthropic.types.TextBlock(type="text", text="not json at all")]

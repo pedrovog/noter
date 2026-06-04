@@ -60,7 +60,13 @@ Copy `.env.example` to `.env` and fill in the required values.
 | `FIRECRAWL_API_KEY` | Firecrawl API key for web search and scraping |
 | `VAULT_PATH` | Absolute path to your Obsidian vault root directory |
 
-`VAULT_PATH` must point to an existing directory. noter writes notes to `$VAULT_PATH/00 - Inbox/` and reads all other `.md` files in the vault to find `[[wikilink]]` candidates.
+`VAULT_PATH` must point to an existing directory. noter writes notes to `$VAULT_PATH/00 - Inbox/` (configurable via `--inbox` / `NOTER_INBOX`) and reads all other `.md` files in the vault to find `[[wikilink]]` candidates.
+
+### Optional — Output folder
+
+| Variable | Default | Description |
+|---|---|---|
+| `NOTER_INBOX` | `00 - Inbox` | Vault subfolder where new notes are written |
 
 ### Optional — Per-Agent Model Overrides
 
@@ -91,6 +97,7 @@ uv run noter "TOPIC"
 | `--cache-ttl N` | `30` | Cache time-to-live in days |
 | `--no-search` | off | Skip automatic web search; only scrape URLs from `--source` / `--source-file` |
 | `--no-cache` | off | Bypass cache reads and writes for this run |
+| `--inbox TEXT` | `00 - Inbox` | Vault subfolder for new notes (overrides `NOTER_INBOX`) |
 | `--verbose`, `-v` | off | Enable DEBUG logging |
 | `--quiet`, `-q` | off | Suppress progress output (warnings and errors still shown) |
 

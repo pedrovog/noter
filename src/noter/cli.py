@@ -9,6 +9,7 @@ import typer
 from dotenv import load_dotenv
 
 from noter import orchestrator
+from noter.config import INBOX_SUBFOLDER
 
 load_dotenv()
 
@@ -48,6 +49,7 @@ def research(
     sources: int = typer.Option(5, "--sources", help="Max automatic sources"),
     cache_ttl: int = typer.Option(30, "--cache-ttl", help="Cache TTL in days"),
     no_cache: bool = typer.Option(False, "--no-cache", help="Bypass cache reads and writes"),
+    inbox: str = typer.Option(INBOX_SUBFOLDER, "--inbox", help="Vault subfolder for new notes"),
     verbose: bool = typer.Option(False, "--verbose", "-v", help="Enable debug logging"),
     quiet: bool = typer.Option(False, "--quiet", "-q", help="Suppress progress output"),
     _version: Optional[bool] = typer.Option(
@@ -67,6 +69,11 @@ def research(
 
     if sources < 1:
         typer.echo("--sources must be >= 1", err=True)
+        raise typer.Exit(code=1)
+
+    inbox = inbox.strip().strip("/")
+    if not inbox:
+        typer.echo("--inbox must not be empty", err=True)
         raise typer.Exit(code=1)
 
     vault_path = os.environ.get("VAULT_PATH", "")
@@ -105,6 +112,7 @@ def research(
         cache_ttl=cache_ttl,
         no_cache=no_cache,
         no_search=no_search,
+        inbox=inbox,
         quiet=quiet,
     )
 

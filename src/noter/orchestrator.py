@@ -24,6 +24,7 @@ def run(
     cache_ttl: int,
     no_cache: bool,
     no_search: bool,
+    inbox: str = "00 - Inbox",
     quiet: bool = False,
 ) -> None:
     # Planner
@@ -95,7 +96,7 @@ def run(
     # Writer
     t0 = time.perf_counter()
     try:
-        note_paths = writer.run(synth_notes, vault_path)
+        note_paths = writer.run(synth_notes, vault_path, inbox)
         names = " | ".join(Path(p).name for p in note_paths)
         logger.debug("Writer finished in %.2fs", time.perf_counter() - t0)
         logger.info("Writer wrote %d note(s)", len(note_paths))
@@ -123,4 +124,4 @@ def run(
         except Exception as exc:
             logger.warning("Failed to register URL usage in cache: %s", exc, exc_info=True)
 
-    _progress(f"\nDone. {len(note_paths)} note(s) in 00 - Inbox/ awaiting review.", quiet)
+    _progress(f"\nDone. {len(note_paths)} note(s) in {inbox}/ awaiting review.", quiet)
