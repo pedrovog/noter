@@ -79,7 +79,10 @@ def _detect_links(body: str, candidates: list[str], client: anthropic.Anthropic)
             system=_SYSTEM_PROMPT,
             messages=[{"role": "user", "content": user_message}],
         )
-        raw = message.content[0].text.strip()
+        block = message.content[0]
+        if not isinstance(block, anthropic.types.TextBlock):
+            raise LinkerError(f"Unexpected content block type: {type(block).__name__}")
+        raw = block.text.strip()
         start, end = raw.find("{"), raw.rfind("}")
         if start != -1 and end != -1:
             raw = raw[start : end + 1]

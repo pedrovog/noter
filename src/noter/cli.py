@@ -35,7 +35,7 @@ def research(
     sources: int = typer.Option(5, "--sources", help="Max automatic sources"),
     cache_ttl: int = typer.Option(30, "--cache-ttl", help="Cache TTL in days"),
     no_cache: bool = typer.Option(False, "--no-cache", help="Bypass cache reads and writes"),
-):
+) -> None:
     """Research a topic and generate a note in the Obsidian vault."""
     # Validate --sources
     if sources < 1:

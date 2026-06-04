@@ -90,7 +90,10 @@ def run(plan: PlannerOutput, sources: list[SourceResult]) -> list[SynthesizedNot
                 system=_SYSTEM_PROMPT,
                 messages=[{"role": "user", "content": user_message}],
             )
-            raw = message.content[0].text
+            block = message.content[0]
+            if not isinstance(block, anthropic.types.TextBlock):
+                raise SynthesizerError(f"Unexpected content block type: {type(block).__name__}")
+            raw = block.text
             try:
                 synthesized = _parse_response(raw)
                 break

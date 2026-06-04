@@ -52,7 +52,7 @@ def get_cached(url: str, ttl_days: int = 30, db_path: Path | str = DB_PATH) -> s
         scraped_at = scraped_at.replace(tzinfo=timezone.utc)
     if _now() - scraped_at > timedelta(days=ttl_days):
         return None
-    return row[0]
+    return str(row[0])
 
 
 def save_cache(url: str, content: str, db_path: Path | str = DB_PATH) -> None:

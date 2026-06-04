@@ -55,7 +55,10 @@ def run(topic: str) -> PlannerOutput:
             system=_SYSTEM_PROMPT,
             messages=[{"role": "user", "content": f"Plan the research notes for: {topic}"}],
         )
-        raw = message.content[0].text.strip()
+        block = message.content[0]
+        if not isinstance(block, anthropic.types.TextBlock):
+            raise PlannerError(f"Unexpected content block type: {type(block).__name__}")
+        raw = block.text.strip()
         start, end = raw.find("{"), raw.rfind("}")
         if start != -1 and end != -1:
             raw = raw[start : end + 1]

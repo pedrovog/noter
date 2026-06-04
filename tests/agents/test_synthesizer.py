@@ -1,6 +1,7 @@
 import json
 from unittest.mock import MagicMock, patch
 
+import anthropic
 import pytest
 
 from noter.agents.synthesizer import _WORD_LIMIT, _truncate, run
@@ -47,7 +48,7 @@ def _make_source(url="https://a.com", title="A", content="word " * 100, source="
 
 def _mock_response(data):
     msg = MagicMock()
-    msg.content = [MagicMock(text=json.dumps(data))]
+    msg.content = [anthropic.types.TextBlock(type="text", text=json.dumps(data))]
     return msg
 
 
@@ -90,7 +91,7 @@ def test_one_note_output_for_simple_topic(mock_anthropic):
 
 def test_invalid_json_raises_synthesizer_error(mock_anthropic):
     bad = MagicMock()
-    bad.content = [MagicMock(text="not valid json {{{")]
+    bad.content = [anthropic.types.TextBlock(type="text", text="not valid json {{{")]
     mock_anthropic.messages.create.return_value = bad
     with pytest.raises(SynthesizerError):
         run(_SIMPLE_PLAN, [_make_source()])
@@ -99,7 +100,7 @@ def test_invalid_json_raises_synthesizer_error(mock_anthropic):
 
 def test_retry_succeeds_on_second_attempt(mock_anthropic):
     bad = MagicMock()
-    bad.content = [MagicMock(text="not valid json {{{")]
+    bad.content = [anthropic.types.TextBlock(type="text", text="not valid json {{{")]
     good = _mock_response(_SYNTH_NOTE)
     mock_anthropic.messages.create.side_effect = [bad, good]
     results = run(_SIMPLE_PLAN, [_make_source()])
@@ -109,7 +110,7 @@ def test_retry_succeeds_on_second_attempt(mock_anthropic):
 
 def test_null_response_drops_note_silently(mock_anthropic):
     null_msg = MagicMock()
-    null_msg.content = [MagicMock(text="null")]
+    null_msg.content = [anthropic.types.TextBlock(type="text", text="null")]
     mock_anthropic.messages.create.return_value = null_msg
     results = run(_SIMPLE_PLAN, [_make_source()])
     assert results == []
