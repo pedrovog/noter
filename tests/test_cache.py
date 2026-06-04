@@ -1,17 +1,6 @@
-import pytest
-
 from noter.cache import check_duplicate, get_cached, register_usage, save_cache
 
 DB = ":memory:"
-
-
-@pytest.fixture(autouse=True)
-def reset_connections():
-    from noter import cache
-
-    cache._connections.clear()
-    yield
-    cache._connections.clear()
 
 
 def test_cache_miss_returns_none():
