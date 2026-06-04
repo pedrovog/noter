@@ -1,7 +1,9 @@
 import logging
 import os
 import re
+from importlib.metadata import version
 from pathlib import Path
+from typing import Optional
 
 import typer
 from dotenv import load_dotenv
@@ -13,6 +15,12 @@ load_dotenv()
 app = typer.Typer()
 
 _URL_RE = re.compile(r"^https?://")
+
+
+def _version_callback(value: bool) -> None:
+    if value:
+        typer.echo(f"noter {version('noter')}")
+        raise typer.Exit()
 
 
 def _validate_urls(urls: list[str]) -> list[str]:
@@ -35,8 +43,15 @@ def research(
     sources: int = typer.Option(5, "--sources", help="Max automatic sources"),
     cache_ttl: int = typer.Option(30, "--cache-ttl", help="Cache TTL in days"),
     no_cache: bool = typer.Option(False, "--no-cache", help="Bypass cache reads and writes"),
+    verbose: bool = typer.Option(False, "--verbose", "-v", help="Enable debug logging"),
+    _version: Optional[bool] = typer.Option(
+        None, "--version", callback=_version_callback, is_eager=True, help="Show version and exit"
+    ),
 ) -> None:
     """Research a topic and generate a note in the Obsidian vault."""
+    if verbose:
+        logging.getLogger().setLevel(logging.DEBUG)
+
     # Validate --sources
     if sources < 1:
         typer.echo("--sources must be >= 1", err=True)

@@ -13,6 +13,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `LICENSE` — MIT license; README updated accordingly
 - `pytest-cov` dev dependency; `--cov=noter --cov-report=term-missing` added to default pytest options; `make coverage` target added
 - `mypy` dev dependency with `strict = true`; `[tool.mypy]` config in `pyproject.toml`; `make typecheck` target added; all type errors fixed across agents and cache
+- `--version` flag: prints `noter <version>` via `importlib.metadata` and exits
+- `--verbose` / `-v` flag: sets log level to DEBUG for tracing sources, cache hits, etc.
 
 ## [0.1.0] - 2026-06-03
 
