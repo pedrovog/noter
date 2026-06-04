@@ -49,7 +49,10 @@ def _infer_tags(note: SynthesizedNote, client: anthropic.Anthropic) -> list[str]
             system=_TAG_SYSTEM_PROMPT,
             messages=[{"role": "user", "content": user_content}],
         )
-        raw = message.content[0].text
+        block = message.content[0]
+        if not isinstance(block, anthropic.types.TextBlock):
+            raise WriterError(f"Unexpected content block type: {type(block).__name__}")
+        raw = block.text
         try:
             tags = json.loads(raw.strip())
             if isinstance(tags, list) and all(isinstance(t, str) for t in tags):

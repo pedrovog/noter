@@ -2,6 +2,7 @@ import json
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
+import anthropic
 import pytest
 
 from noter.agents.linker import _build_index, run
@@ -29,7 +30,8 @@ def _note_body(content: str) -> str:
 
 def _mock_links(titles: list[str]) -> MagicMock:
     msg = MagicMock()
-    msg.content = [MagicMock(text=json.dumps({"titles_to_link": titles}))]
+    text = json.dumps({"titles_to_link": titles})
+    msg.content = [anthropic.types.TextBlock(type="text", text=text)]
     return msg
 
 
@@ -144,7 +146,7 @@ def test_detect_links_retries_on_bad_json(mock_anthropic, tmp_path):
     note_path.write_text(_make_note_content("Intro", "RAG is a retrieval technique."))
 
     bad = MagicMock()
-    bad.content = [MagicMock(text="not json at all")]
+    bad.content = [anthropic.types.TextBlock(type="text", text="not json at all")]
     mock_anthropic.messages.create.side_effect = [bad, _mock_links(["RAG"])]
 
     run([str(note_path)], str(tmp_path))

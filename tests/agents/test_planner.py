@@ -1,6 +1,7 @@
 import json
 from unittest.mock import MagicMock, patch
 
+import anthropic
 import pytest
 
 from noter.agents.planner import run
@@ -60,7 +61,7 @@ _BROAD_PLAN = {
 
 def _mock_response(data: dict) -> MagicMock:
     msg = MagicMock()
-    msg.content = [MagicMock(text=json.dumps(data))]
+    msg.content = [anthropic.types.TextBlock(type="text", text=json.dumps(data))]
     return msg
 
 
@@ -96,7 +97,7 @@ def test_search_queries_generated(mock_anthropic):
 
 def test_invalid_output_raises_exception(mock_anthropic):
     bad = MagicMock()
-    bad.content = [MagicMock(text="not valid json {{{")]
+    bad.content = [anthropic.types.TextBlock(type="text", text="not valid json {{{")]
     mock_anthropic.messages.create.return_value = bad
     with pytest.raises(PlannerError):
         run("any topic")
@@ -104,7 +105,7 @@ def test_invalid_output_raises_exception(mock_anthropic):
 
 def test_retry_succeeds_on_first_bad_response(mock_anthropic):
     bad = MagicMock()
-    bad.content = [MagicMock(text="not valid json {{{")]
+    bad.content = [anthropic.types.TextBlock(type="text", text="not valid json {{{")]
     good = _mock_response(_SIMPLE_PLAN)
     mock_anthropic.messages.create.side_effect = [bad, good]
     result = run("what is backpropagation")

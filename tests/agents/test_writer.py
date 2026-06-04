@@ -1,6 +1,7 @@
 import json
 from unittest.mock import MagicMock, patch
 
+import anthropic
 import pytest
 
 from noter.agents.writer import run
@@ -24,7 +25,8 @@ def _make_note(
 
 def _mock_tags(tags=None):
     msg = MagicMock()
-    msg.content = [MagicMock(text=json.dumps(tags or ["rag", "ai", "nlp"]))]
+    text = json.dumps(tags or ["rag", "ai", "nlp"])
+    msg.content = [anthropic.types.TextBlock(type="text", text=text)]
     return msg
 
 
@@ -86,7 +88,7 @@ def test_sources_listed_correctly(mock_anthropic, tmp_path):
 
 def test_tag_inference_failure_raises_writer_error(mock_anthropic, tmp_path):
     mock_anthropic.messages.create.return_value = MagicMock(
-        content=[MagicMock(text="not json at all")]
+        content=[anthropic.types.TextBlock(type="text", text="not json at all")]
     )
     with pytest.raises(WriterError):
         run([_make_note()], str(tmp_path))
