@@ -38,6 +38,11 @@ def chat(*, system: str, user: str, model: str, max_tokens: int) -> str:
             {"role": "system", "content": system},
             {"role": "user", "content": user},
         ],
+        # noter wants structured JSON, not chain-of-thought. "none" disables
+        # thinking on reasoning models (Gemini 2.5, Claude) so reasoning tokens
+        # don't eat the max_tokens budget and truncate the JSON. drop_params
+        # discards it for providers/models that don't support reasoning_effort.
+        "reasoning_effort": "none",
     }
     if LLM_API_BASE:
         kwargs["api_base"] = LLM_API_BASE

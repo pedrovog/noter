@@ -22,6 +22,8 @@ def test_returns_message_content():
         {"role": "system", "content": "s"},
         {"role": "user", "content": "u"},
     ]
+    # Thinking is disabled so reasoning tokens don't truncate JSON output.
+    assert kwargs["reasoning_effort"] == "none"
 
 
 def test_api_base_passed_when_set():

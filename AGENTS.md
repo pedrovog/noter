@@ -98,7 +98,7 @@ cli.py
 
 ### Key modules
 
-- `llm.py` — the **only** module that imports LiteLLM. `chat(system, user, model, max_tokens) -> str` normalises any provider's response to a plain string; reads `NOTER_API_BASE` for local endpoints. All 4 LLM agents call it; raises `LLMError` on failure/empty content.
+- `llm.py` — the **only** module that imports LiteLLM. `chat(system, user, model, max_tokens) -> str` normalises any provider's response to a plain string; reads `NOTER_API_BASE` for local endpoints. Passes `reasoning_effort="none"` to disable thinking on reasoning models (Gemini 2.5, Claude) so reasoning tokens don't consume the `max_tokens` budget and truncate the JSON (`drop_params` discards it for models that don't support it). All 4 LLM agents call it; raises `LLMError` on failure/empty content.
 - `schemas.py` — Pydantic v2 models shared across the pipeline: `NoteSpec`, `PlannerOutput`, `SourceResult`, `SubtopicContent`, `SourceRef`, `SynthesizedNote`
 - `config.py` — provider/model selection (`NOTER_MODEL`/`NOTER_PROVIDER`/`NOTER_API_BASE` + `NOTER_*_MODEL` per-agent overrides, default `anthropic/claude-sonnet-4-6`; `_resolve()` joins a bare model with `NOTER_PROVIDER`) and `INBOX_SUBFOLDER` (default `noter`)
 - `cache.py` — SQLite, two tables: `scrape_cache` (URL → markdown, TTL-based) and `url_usage` (URL → note path, for duplicate warnings). Uses a module-level `_connections` dict to keep `:memory:` connections alive across calls.
