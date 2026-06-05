@@ -156,6 +156,25 @@ Legend: `[x]` done · `[ ]` todo · `[~]` exists but needs rework
 
 ---
 
+## Phase 10 — Multi-provider LLM support via LiteLLM (issue #10)
+
+> Goal: any LiteLLM-supported provider (OpenAI, Gemini, DeepSeek, …) and local
+> models (Ollama, vLLM, LM Studio) via a single adapter. Default Anthropic
+> behaviour unchanged.
+
+- [x] `uv add litellm`; remove `anthropic` dependency + keyword from `pyproject.toml`
+- [x] `src/noter/llm.py` — `chat(system, user, model, max_tokens) -> str` over `litellm.completion`; `suppress_debug_info` + `drop_params`; reads `NOTER_API_BASE`
+- [x] `exceptions.py` — add `LLMError`
+- [x] `config.py` — `NOTER_PROVIDER`, `NOTER_API_BASE`, default `anthropic/claude-sonnet-4-6`, `_resolve()` joins bare model with provider
+- [x] Migrate `planner`, `synthesizer`, `writer`, `linker` to `noter.llm.chat` (no anthropic imports, no `TextBlock` checks, no client plumbing)
+- [x] `cli.py` — quiet the `litellm`/`LiteLLM` loggers
+- [x] Tests — mock `noter.agents.<agent>.chat` (returns raw string); new `tests/test_llm.py` (api_base, empty content, error wrapping)
+- [x] Docs — `.env.example`, `AGENTS.md`/`CLAUDE.md`, `README.md` (provider table + Ollama local example), `TECHNICAL_SPEC.md`
+- [x] `make test` (52 pass), `make typecheck` clean, ruff clean
+- [ ] Manual acceptance: default Anthropic run; `openai/gpt-4o`; `ollama_chat/<model>` + local server end-to-end (requires live keys/server)
+
+---
+
 ## Current State Summary
 
 | Component | Status |

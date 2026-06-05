@@ -16,3 +16,7 @@ class WriterError(Exception):
 
 class LinkerError(Exception):
     pass
+
+
+class LLMError(Exception):
+    pass

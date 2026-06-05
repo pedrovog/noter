@@ -6,10 +6,9 @@ from datetime import date
 from json import JSONDecodeError
 from pathlib import Path
 
-import anthropic
-
 from noter.config import WRITER_MODEL
 from noter.exceptions import WriterError
+from noter.llm import chat
 from noter.schemas import SynthesizedNote
 
 logger = logging.getLogger(__name__)
@@ -43,21 +42,22 @@ def _resolve_path(inbox: Path, name: str) -> Path:
     return path
 
 
-def _infer_tags(note: SynthesizedNote, client: anthropic.Anthropic) -> list[str]:
+def _infer_tags(note: SynthesizedNote) -> list[str]:
     user_content = f"Title: {note.note_title}\nCore concept: {note.core_concept}"
     for attempt in range(2):
-        message = client.messages.create(
+        raw = chat(
+            system=_TAG_SYSTEM_PROMPT,
+            user=user_content,
             model=WRITER_MODEL,
             max_tokens=256,
-            system=_TAG_SYSTEM_PROMPT,
-            messages=[{"role": "user", "content": user_content}],
-        )
-        block = message.content[0]
-        if not isinstance(block, anthropic.types.TextBlock):
-            raise WriterError(f"Unexpected content block type: {type(block).__name__}")
-        raw = block.text
+        ).strip()
+        # Extract the JSON array — models often wrap it in ```json fences or
+        # add a preamble despite the prompt (esp. non-Anthropic providers).
+        start, end = raw.find("["), raw.rfind("]")
+        if start != -1 and end != -1:
+            raw = raw[start : end + 1]
         try:
-            tags = json.loads(raw.strip())
+            tags = json.loads(raw)
             if isinstance(tags, list) and all(isinstance(t, str) for t in tags):
                 return tags
             raise ValueError(f"unexpected tag format: {tags}")
@@ -105,13 +105,12 @@ def _render_note(note: SynthesizedNote, tags: list[str], created: str) -> str:
 def run(synth_notes: list[SynthesizedNote], vault_path: str, inbox: str = "noter") -> list[str]:
     inbox_dir = Path(vault_path) / inbox
     inbox_dir.mkdir(parents=True, exist_ok=True)
-    client = anthropic.Anthropic()
     created = date.today().isoformat()
     paths = []
 
     for note in synth_notes:
         logger.debug("Writer: rendering note %r", note.note_title)
-        tags = _infer_tags(note, client)
+        tags = _infer_tags(note)
         name = _sanitize(note.note_title)
         path = _resolve_path(inbox_dir, name)
         if path.name != f"{name}.md":

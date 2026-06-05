@@ -1,7 +1,6 @@
 import json
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
-import anthropic
 import pytest
 
 from noter.agents.writer import run
@@ -24,22 +23,17 @@ def _make_note(
 
 
 def _mock_tags(tags=None):
-    msg = MagicMock()
-    text = json.dumps(tags or ["rag", "ai", "nlp"])
-    msg.content = [anthropic.types.TextBlock(type="text", text=text)]
-    return msg
+    return json.dumps(tags or ["rag", "ai", "nlp"])
 
 
 @pytest.fixture
-def mock_anthropic():
-    with patch("noter.agents.writer.anthropic.Anthropic") as cls:
-        instance = MagicMock()
-        cls.return_value = instance
-        yield instance
+def mock_chat():
+    with patch("noter.agents.writer.chat") as chat:
+        yield chat
 
 
-def test_correct_frontmatter(mock_anthropic, tmp_path):
-    mock_anthropic.messages.create.return_value = _mock_tags(["rag", "ai", "nlp"])
+def test_correct_frontmatter(mock_chat, tmp_path):
+    mock_chat.return_value = _mock_tags(["rag", "ai", "nlp"])
     run([_make_note()], str(tmp_path))
     content = (tmp_path / "noter" / "RAG Architecture.md").read_text()
     assert "type: permanent" in content
@@ -48,14 +42,14 @@ def test_correct_frontmatter(mock_anthropic, tmp_path):
     assert "sources:" in content
 
 
-def test_filename_sanitization(mock_anthropic, tmp_path):
-    mock_anthropic.messages.create.return_value = _mock_tags()
+def test_filename_sanitization(mock_chat, tmp_path):
+    mock_chat.return_value = _mock_tags()
     run([_make_note(title="Atenção: RAG!")], str(tmp_path))
     assert (tmp_path / "noter" / "Atencao RAG.md").exists()
 
 
-def test_numeric_suffix_when_file_exists(mock_anthropic, tmp_path):
-    mock_anthropic.messages.create.return_value = _mock_tags()
+def test_numeric_suffix_when_file_exists(mock_chat, tmp_path):
+    mock_chat.return_value = _mock_tags()
     inbox = tmp_path / "noter"
     inbox.mkdir(parents=True)
     (inbox / "RAG Architecture.md").write_text("existing")
@@ -64,8 +58,8 @@ def test_numeric_suffix_when_file_exists(mock_anthropic, tmp_path):
     assert (inbox / "RAG Architecture (2).md").exists()
 
 
-def test_required_sections_present(mock_anthropic, tmp_path):
-    mock_anthropic.messages.create.return_value = _mock_tags()
+def test_required_sections_present(mock_chat, tmp_path):
+    mock_chat.return_value = _mock_tags()
     run([_make_note()], str(tmp_path))
     content = (tmp_path / "noter" / "RAG Architecture.md").read_text()
     assert "## Core Concept" in content
@@ -74,8 +68,8 @@ def test_required_sections_present(mock_anthropic, tmp_path):
     assert "## Sources" in content
 
 
-def test_sources_listed_correctly(mock_anthropic, tmp_path):
-    mock_anthropic.messages.create.return_value = _mock_tags()
+def test_sources_listed_correctly(mock_chat, tmp_path):
+    mock_chat.return_value = _mock_tags()
     sources = [
         SourceRef(url="https://a.com", title="Paper A"),
         SourceRef(url="https://b.com", title="Paper B"),
@@ -86,22 +80,35 @@ def test_sources_listed_correctly(mock_anthropic, tmp_path):
     assert "- [Paper B](https://b.com)" in content
 
 
-def test_default_inbox_unchanged(mock_anthropic, tmp_path):
-    mock_anthropic.messages.create.return_value = _mock_tags()
+def test_default_inbox_unchanged(mock_chat, tmp_path):
+    mock_chat.return_value = _mock_tags()
     run([_make_note()], str(tmp_path))
     assert (tmp_path / "noter" / "RAG Architecture.md").exists()
 
 
-def test_writes_to_custom_inbox(mock_anthropic, tmp_path):
-    mock_anthropic.messages.create.return_value = _mock_tags()
+def test_writes_to_custom_inbox(mock_chat, tmp_path):
+    mock_chat.return_value = _mock_tags()
     run([_make_note()], str(tmp_path), inbox="Notes/Drafts")
     assert (tmp_path / "Notes" / "Drafts" / "RAG Architecture.md").exists()
 
 
-def test_tag_inference_failure_raises_writer_error(mock_anthropic, tmp_path):
-    mock_anthropic.messages.create.return_value = MagicMock(
-        content=[anthropic.types.TextBlock(type="text", text="not json at all")]
-    )
+def test_tag_inference_failure_raises_writer_error(mock_chat, tmp_path):
+    mock_chat.return_value = "not json at all"
     with pytest.raises(WriterError):
         run([_make_note()], str(tmp_path))
-    assert mock_anthropic.messages.create.call_count == 2
+    assert mock_chat.call_count == 2
+
+
+def test_tags_extracted_from_markdown_fence(mock_chat, tmp_path):
+    # Many models wrap the array in a ```json fence despite the prompt.
+    mock_chat.return_value = '```json\n["rag", "ai", "nlp"]\n```'
+    run([_make_note()], str(tmp_path))
+    content = (tmp_path / "noter" / "RAG Architecture.md").read_text()
+    assert "tags: [rag, ai, nlp]" in content
+
+
+def test_tags_extracted_with_preamble(mock_chat, tmp_path):
+    mock_chat.return_value = 'Here are the tags: ["rag", "ai"]'
+    run([_make_note()], str(tmp_path))
+    content = (tmp_path / "noter" / "RAG Architecture.md").read_text()
+    assert "tags: [rag, ai]" in content

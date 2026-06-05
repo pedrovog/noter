@@ -1,11 +1,9 @@
 import json
 import logging
-import os
-
-import anthropic
 
 from noter.config import PLANNER_MODEL
 from noter.exceptions import PlannerError
+from noter.llm import chat
 from noter.schemas import PlannerOutput
 
 logger = logging.getLogger(__name__)
@@ -47,22 +45,17 @@ def run(topic: str) -> PlannerOutput:
     """Return a structured research plan for the given topic.
 
     Raises:
-        PlannerError: if Claude returns invalid JSON after one retry.
+        PlannerError: if the LLM returns invalid JSON after one retry.
     """
     logger.debug("Planner: requesting plan for topic=%r model=%s", topic, PLANNER_MODEL)
-    client = anthropic.Anthropic(api_key=os.environ.get("ANTHROPIC_API_KEY"))
 
     for attempt in range(2):
-        message = client.messages.create(
+        raw = chat(
+            system=_SYSTEM_PROMPT,
+            user=f"Plan the research notes for: {topic}",
             model=PLANNER_MODEL,
             max_tokens=2048,
-            system=_SYSTEM_PROMPT,
-            messages=[{"role": "user", "content": f"Plan the research notes for: {topic}"}],
-        )
-        block = message.content[0]
-        if not isinstance(block, anthropic.types.TextBlock):
-            raise PlannerError(f"Unexpected content block type: {type(block).__name__}")
-        raw = block.text.strip()
+        ).strip()
         start, end = raw.find("{"), raw.rfind("}")
         if start != -1 and end != -1:
             raw = raw[start : end + 1]

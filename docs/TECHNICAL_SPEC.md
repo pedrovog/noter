@@ -343,7 +343,7 @@ tests/
 ## Testing Rules
 
 - Cache tests: always pass `db_path=":memory:"`.
-- Agent tests: mock `anthropic.Anthropic` client and `firecrawl.FirecrawlApp`.
+- Agent tests: mock `noter.llm.chat` (returns the raw response string) and `firecrawl.FirecrawlApp`.
 - Writer tests: use `tmp_path` (pytest fixture) for vault filesystem.
 - Linker tests: use `tmp_path` for vault.
 - No test should make real network calls or touch `~/.pesquisa/cache.db`.

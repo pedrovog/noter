@@ -1,8 +1,7 @@
 import json
 import logging
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
-import anthropic
 import pytest
 
 from noter.agents.synthesizer import _WORD_LIMIT, _truncate, run
@@ -48,25 +47,21 @@ def _make_source(url="https://a.com", title="A", content="word " * 100, source="
 
 
 def _mock_response(data):
-    msg = MagicMock()
-    msg.content = [anthropic.types.TextBlock(type="text", text=json.dumps(data))]
-    return msg
+    return json.dumps(data)
 
 
 @pytest.fixture
-def mock_anthropic():
-    with patch("noter.agents.synthesizer.anthropic.Anthropic") as cls:
-        instance = MagicMock()
-        cls.return_value = instance
-        yield instance
+def mock_chat():
+    with patch("noter.agents.synthesizer.chat") as chat:
+        yield chat
 
 
-def test_user_sources_prioritized_in_context(mock_anthropic):
-    mock_anthropic.messages.create.return_value = _mock_response(_SYNTH_NOTE)
+def test_user_sources_prioritized_in_context(mock_chat):
+    mock_chat.return_value = _mock_response(_SYNTH_NOTE)
     user_src = _make_source(url="https://user.com", title="User Source", source="user")
     auto_sources = [_make_source(url=f"https://auto{i}.com", title=f"Auto {i}") for i in range(5)]
     run(_SIMPLE_PLAN, [*auto_sources, user_src])
-    user_msg = mock_anthropic.messages.create.call_args.kwargs["messages"][0]["content"]
+    user_msg = mock_chat.call_args.kwargs["user"]
     assert user_msg.index("https://user.com") < user_msg.index("https://auto0.com")
 
 
@@ -75,44 +70,37 @@ def test_truncation_respects_token_limit():
     assert len(result.split()) == _WORD_LIMIT
 
 
-def test_multiple_notes_generated_for_broad_topic(mock_anthropic):
-    mock_anthropic.messages.create.return_value = _mock_response(_SYNTH_NOTE)
+def test_multiple_notes_generated_for_broad_topic(mock_chat):
+    mock_chat.return_value = _mock_response(_SYNTH_NOTE)
     results = run(_BROAD_PLAN, [_make_source()])
     assert len(results) == 2
-    assert mock_anthropic.messages.create.call_count == 2
+    assert mock_chat.call_count == 2
     assert all(isinstance(r, SynthesizedNote) for r in results)
 
 
-def test_one_note_output_for_simple_topic(mock_anthropic):
-    mock_anthropic.messages.create.return_value = _mock_response(_SYNTH_NOTE)
+def test_one_note_output_for_simple_topic(mock_chat):
+    mock_chat.return_value = _mock_response(_SYNTH_NOTE)
     results = run(_SIMPLE_PLAN, [_make_source()])
     assert len(results) == 1
     assert isinstance(results[0], SynthesizedNote)
 
 
-def test_invalid_json_raises_synthesizer_error(mock_anthropic):
-    bad = MagicMock()
-    bad.content = [anthropic.types.TextBlock(type="text", text="not valid json {{{")]
-    mock_anthropic.messages.create.return_value = bad
+def test_invalid_json_raises_synthesizer_error(mock_chat):
+    mock_chat.return_value = "not valid json {{{"
     with pytest.raises(SynthesizerError):
         run(_SIMPLE_PLAN, [_make_source()])
-    assert mock_anthropic.messages.create.call_count == 2
+    assert mock_chat.call_count == 2
 
 
-def test_retry_succeeds_on_second_attempt(mock_anthropic):
-    bad = MagicMock()
-    bad.content = [anthropic.types.TextBlock(type="text", text="not valid json {{{")]
-    good = _mock_response(_SYNTH_NOTE)
-    mock_anthropic.messages.create.side_effect = [bad, good]
+def test_retry_succeeds_on_second_attempt(mock_chat):
+    mock_chat.side_effect = ["not valid json {{{", _mock_response(_SYNTH_NOTE)]
     results = run(_SIMPLE_PLAN, [_make_source()])
     assert len(results) == 1
-    assert mock_anthropic.messages.create.call_count == 2
+    assert mock_chat.call_count == 2
 
 
-def test_null_response_drops_note_silently(mock_anthropic, caplog):
-    null_msg = MagicMock()
-    null_msg.content = [anthropic.types.TextBlock(type="text", text="null")]
-    mock_anthropic.messages.create.return_value = null_msg
+def test_null_response_drops_note_silently(mock_chat, caplog):
+    mock_chat.return_value = "null"
     with caplog.at_level(logging.WARNING, logger="noter.agents.synthesizer"):
         results = run(_SIMPLE_PLAN, [_make_source()])
     assert results == []

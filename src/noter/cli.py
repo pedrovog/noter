@@ -22,7 +22,7 @@ app = typer.Typer()
 _URL_RE = re.compile(r"^https?://")
 
 _VERBOSE_FMT = "%(asctime)s %(threadName)-10s %(name)-28s %(levelname)-7s %(message)s"
-_THIRD_PARTY_LOGGERS = ("httpx", "httpcore", "anthropic", "urllib3", "firecrawl")
+_THIRD_PARTY_LOGGERS = ("httpx", "httpcore", "litellm", "LiteLLM", "urllib3", "firecrawl")
 
 
 def _version_callback(value: bool) -> None:

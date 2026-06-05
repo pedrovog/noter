@@ -32,7 +32,7 @@ Each generated note includes a YAML frontmatter block, a structured body organiz
 
 - Python 3.12 or later
 - [uv](https://docs.astral.sh/uv/) (package manager)
-- An [Anthropic API key](https://console.anthropic.com/)
+- An API key for your chosen LLM provider — e.g. [Anthropic](https://console.anthropic.com/) (default), OpenAI, Gemini, DeepSeek — or a local model server like [Ollama](https://ollama.com/) (no key needed)
 - A [Firecrawl API key](https://firecrawl.dev/)
 - An existing Obsidian vault directory on the local filesystem
 
@@ -56,7 +56,7 @@ Copy `.env.example` to `.env` and fill in the required values.
 
 | Variable | Description |
 |---|---|
-| `ANTHROPIC_API_KEY` | Anthropic API key for all Claude calls |
+| `<PROVIDER>_API_KEY` | API key for your LLM provider — `ANTHROPIC_API_KEY` (default), `OPENAI_API_KEY`, `GEMINI_API_KEY`, `DEEPSEEK_API_KEY`, … (not needed for local models) |
 | `FIRECRAWL_API_KEY` | Firecrawl API key for web search and scraping |
 | `VAULT_PATH` | Absolute path to your Obsidian vault root directory |
 
@@ -68,18 +68,39 @@ Copy `.env.example` to `.env` and fill in the required values.
 |---|---|---|
 | `NOTER_INBOX` | `noter` | Vault subfolder where new notes are written |
 
-### Optional — Per-Agent Model Overrides
+### Optional — LLM provider & model
 
-By default every agent uses `claude-sonnet-4-6`. Override per agent in `.env`:
+noter routes all LLM calls through [LiteLLM](https://github.com/BerriAI/litellm), so you can use any supported provider by setting a provider-prefixed model string. The default is `anthropic/claude-sonnet-4-6`.
+
+| Variable | Example | Description |
+|---|---|---|
+| `NOTER_MODEL` | `openai/gpt-4o` | Global model for all agents (provider-prefixed) |
+| `NOTER_PROVIDER` | `openai` | Optional. Prepended to a bare `NOTER_MODEL` with no `/` (so `NOTER_PROVIDER=openai` + `NOTER_MODEL=gpt-4o` = `openai/gpt-4o`) |
+| `NOTER_API_BASE` | `http://localhost:11434` | Optional. Endpoint base URL — required for local/self-hosted servers |
+
+Common values: `anthropic/claude-sonnet-4-6`, `openai/gpt-4o`, `gemini/gemini-2.0-flash`, `deepseek/deepseek-chat`. Set the matching `<PROVIDER>_API_KEY` in `.env`.
+
+**Per-agent overrides** — each falls back to `NOTER_MODEL` when unset:
 
 | Variable | Default | Agent |
 |---|---|---|
-| `NOTER_PLANNER_MODEL` | `claude-sonnet-4-6` | Planner |
-| `NOTER_SYNTHESIZER_MODEL` | `claude-sonnet-4-6` | Synthesizer |
-| `NOTER_WRITER_MODEL` | `claude-haiku-4-5-20251001` | Writer |
-| `NOTER_LINKER_MODEL` | `claude-haiku-4-5-20251001` | Linker |
+| `NOTER_PLANNER_MODEL` | `anthropic/claude-sonnet-4-6` | Planner |
+| `NOTER_SYNTHESIZER_MODEL` | `anthropic/claude-sonnet-4-6` | Synthesizer |
+| `NOTER_WRITER_MODEL` | `anthropic/claude-haiku-4-5-20251001` | Writer |
+| `NOTER_LINKER_MODEL` | `anthropic/claude-haiku-4-5-20251001` | Linker |
 
-The global fallback `NOTER_MODEL` applies to any agent whose specific variable is not set.
+#### Using a local model (Ollama)
+
+Run a model with [Ollama](https://ollama.com/) and point noter at it — no API key required:
+
+```bash
+ollama pull llama3.1
+# in .env:
+NOTER_MODEL=ollama_chat/llama3.1
+NOTER_API_BASE=http://localhost:11434
+```
+
+The same `NOTER_API_BASE` mechanism works for any OpenAI-compatible local server (vLLM, LM Studio, text-generation-inference). Note: smaller local models produce less reliable structured JSON; noter retries once per call but very small models may still struggle.
 
 ## Usage
 
@@ -169,7 +190,7 @@ cli.py
 |---|---|
 | Planner | Decides how many notes to write, what subtopics each covers, and generates search queries |
 | Searcher | Fetches sources via Firecrawl search, arXiv, and Wikipedia in parallel; serves cache hits first |
-| Synthesizer | Sends scraped content to Claude and produces structured note drafts per `NoteSpec` |
+| Synthesizer | Sends scraped content to the LLM and produces structured note drafts per `NoteSpec` |
 | Writer | Renders drafts as `.md` files with YAML frontmatter; writes to `VAULT_PATH/00 - Inbox/` |
 | Linker | Scans the vault for existing note titles and injects `[[wikilinks]]` into new notes in-place |
 
@@ -251,7 +272,7 @@ make search topic="RAG"     # runs Planner + Searcher, prints SourceResult list 
 ### Testing Conventions
 
 - Cache tests pass `db_path=":memory:"` — no test touches `~/.pesquisa/cache.db`
-- Agent tests mock `anthropic.Anthropic` and `firecrawl.FirecrawlApp` at the module level (e.g. `patch("noter.agents.planner.anthropic.Anthropic")`)
+- Agent tests mock `noter.llm.chat` at the module level (e.g. `patch("noter.agents.planner.chat")`) and `firecrawl.FirecrawlApp` for the searcher
 - Writer and Linker tests use `tmp_path` for all filesystem operations
 - No test makes real network calls
 
@@ -265,7 +286,7 @@ These are intentional constraints, not missing features:
 | No Docker or containerization | Zero-infrastructure local install |
 | SQLite only — no Redis, no Postgres | No external services required |
 | Write-once to `00 - Inbox/` — no editing existing notes | Notes are for human review; automated overwriting is out of scope |
-| No streaming LLM responses | Batch pipeline; all Claude output is structured JSON |
+| No streaming LLM responses | Batch pipeline; all LLM output is structured JSON |
 | Firecrawl only for scraping | No Playwright, Selenium, or custom crawlers |
 | No semantic search or vector embeddings | Out of scope |
 | No scheduling or daemon mode | Invoked manually per topic |

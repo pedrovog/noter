@@ -52,25 +52,29 @@ Copy `.env.example` → `.env` and fill in:
 
 | Variable | Purpose |
 |---|---|
-| `ANTHROPIC_API_KEY` | Claude API |
 | `FIRECRAWL_API_KEY` | Web scraping |
 | `VAULT_PATH` | Absolute path to Obsidian vault root |
+| `<PROVIDER>_API_KEY` | Key for the chosen LLM provider — e.g. `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `GEMINI_API_KEY`, `DEEPSEEK_API_KEY` |
 
-Output folder (optional):
+LLM access goes through LiteLLM (`src/noter/llm.py`), so any LiteLLM-supported provider works. Output folder (optional):
 
 | Variable | Default | Purpose |
 |---|---|---|
 | `NOTER_INBOX` | `noter` | Vault subfolder where new notes are written |
 
-Model overrides (optional, all default to `claude-sonnet-4-6`):
+Provider / model selection (LiteLLM; all default to `anthropic/claude-sonnet-4-6`):
 
 | Variable | Scope |
 |---|---|
-| `NOTER_MODEL` | Global default for all agents |
+| `NOTER_MODEL` | Global default — provider-prefixed string (`openai/gpt-4o`, `gemini/gemini-2.0-flash`, `ollama_chat/llama3.1`) |
+| `NOTER_PROVIDER` | Optional. Prepended to a bare `NOTER_MODEL` that has no `/` (e.g. `openai` + `gpt-4o`) |
+| `NOTER_API_BASE` | Optional. Endpoint base URL — required for local/self-hosted servers (Ollama: `http://localhost:11434`) |
 | `NOTER_PLANNER_MODEL` | Planner only |
 | `NOTER_SYNTHESIZER_MODEL` | Synthesizer only |
 | `NOTER_WRITER_MODEL` | Writer only |
 | `NOTER_LINKER_MODEL` | Linker only |
+
+**Local models (Ollama / vLLM / LM Studio):** set `NOTER_MODEL=ollama_chat/<model>` + `NOTER_API_BASE=http://localhost:11434`; no API key required.
 
 SQLite cache lives at `~/.pesquisa/cache.db` (created automatically).
 
@@ -90,14 +94,15 @@ cli.py
 
 **Agents** (`src/noter/agents/`) are plain modules — a `run()` function, no classes.
 **Orchestrator** is the only component that sequences agents. Agents do not call each other.
-**Per-agent error handling**: Firecrawl failures are logged and skipped; Claude JSON parse errors retry once then skip. Linker failure never deletes already-written notes.
+**Per-agent error handling**: Firecrawl failures are logged and skipped; LLM JSON parse errors retry once then skip. Linker failure never deletes already-written notes.
 
 ### Key modules
 
+- `llm.py` — the **only** module that imports LiteLLM. `chat(system, user, model, max_tokens) -> str` normalises any provider's response to a plain string; reads `NOTER_API_BASE` for local endpoints. All 4 LLM agents call it; raises `LLMError` on failure/empty content.
 - `schemas.py` — Pydantic v2 models shared across the pipeline: `NoteSpec`, `PlannerOutput`, `SourceResult`, `SubtopicContent`, `SourceRef`, `SynthesizedNote`
-- `config.py` — model selection (`NOTER_*_MODEL` env vars, default `claude-sonnet-4-6`) and `INBOX_SUBFOLDER` (default `noter`)
+- `config.py` — provider/model selection (`NOTER_MODEL`/`NOTER_PROVIDER`/`NOTER_API_BASE` + `NOTER_*_MODEL` per-agent overrides, default `anthropic/claude-sonnet-4-6`; `_resolve()` joins a bare model with `NOTER_PROVIDER`) and `INBOX_SUBFOLDER` (default `noter`)
 - `cache.py` — SQLite, two tables: `scrape_cache` (URL → markdown, TTL-based) and `url_usage` (URL → note path, for duplicate warnings). Uses a module-level `_connections` dict to keep `:memory:` connections alive across calls.
-- `exceptions.py` — `PlannerError`, `SearcherError`, `SynthesizerError`, `WriterError`, `LinkerError`
+- `exceptions.py` — `PlannerError`, `SearcherError`, `SynthesizerError`, `WriterError`, `LinkerError`, `LLMError`
 
 ### Searcher parallelism
 
@@ -110,7 +115,7 @@ Writer produces Obsidian markdown with YAML frontmatter (`type`, `created`, `tag
 ## Testing conventions
 
 - **Cache tests**: pass `db_path=":memory:"` + use the `reset_connections` autouse fixture (clears `cache._connections` before/after each test) for isolation.
-- **Agent tests**: mock `anthropic.Anthropic` and `firecrawl.FirecrawlApp` at the module level (e.g. `patch("noter.agents.planner.anthropic.Anthropic")`). Use `pytest-mock`'s `mocker` fixture.
+- **Agent tests**: mock `noter.llm.chat` at the agent module level (e.g. `patch("noter.agents.planner.chat")`) — it returns the raw response string directly. Mock `firecrawl.FirecrawlApp` for the searcher.
 - **Writer/Linker tests**: use `tmp_path` for the vault filesystem.
 - No test touches the real `~/.pesquisa/cache.db` or makes real network calls.
 - Test files mirror `src/noter/` under `tests/`.

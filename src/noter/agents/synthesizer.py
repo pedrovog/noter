@@ -2,11 +2,11 @@ import json
 import logging
 from json import JSONDecodeError
 
-import anthropic
 from pydantic import ValidationError
 
 from noter.config import SYNTHESIZER_MODEL
 from noter.exceptions import SynthesizerError
+from noter.llm import chat
 from noter.schemas import NoteSpec, PlannerOutput, SourceResult, SynthesizedNote
 
 logger = logging.getLogger(__name__)
@@ -79,7 +79,6 @@ def _parse_response(raw: str) -> SynthesizedNote | None:
 
 
 def run(plan: PlannerOutput, sources: list[SourceResult]) -> list[SynthesizedNote]:
-    client = anthropic.Anthropic()
     results = []
 
     for note_spec in plan.notes:
@@ -93,16 +92,12 @@ def run(plan: PlannerOutput, sources: list[SourceResult]) -> list[SynthesizedNot
         synthesized = None
 
         for attempt in range(2):
-            message = client.messages.create(
+            raw = chat(
+                system=_SYSTEM_PROMPT,
+                user=user_message,
                 model=SYNTHESIZER_MODEL,
                 max_tokens=8192,
-                system=_SYSTEM_PROMPT,
-                messages=[{"role": "user", "content": user_message}],
             )
-            block = message.content[0]
-            if not isinstance(block, anthropic.types.TextBlock):
-                raise SynthesizerError(f"Unexpected content block type: {type(block).__name__}")
-            raw = block.text
             try:
                 synthesized = _parse_response(raw)
                 break

@@ -1,8 +1,7 @@
 import json
 from pathlib import Path
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
-import anthropic
 import pytest
 
 from noter.agents.linker import _build_index, run
@@ -28,19 +27,14 @@ def _note_body(content: str) -> str:
     return content.split("## Connections")[0] if "## Connections" in content else content
 
 
-def _mock_links(titles: list[str]) -> MagicMock:
-    msg = MagicMock()
-    text = json.dumps({"titles_to_link": titles})
-    msg.content = [anthropic.types.TextBlock(type="text", text=text)]
-    return msg
+def _mock_links(titles: list[str]) -> str:
+    return json.dumps({"titles_to_link": titles})
 
 
 @pytest.fixture
-def mock_anthropic():
-    with patch("noter.agents.linker.anthropic.Anthropic") as cls:
-        instance = MagicMock()
-        cls.return_value = instance
-        yield instance
+def mock_chat():
+    with patch("noter.agents.linker.chat") as chat:
+        yield chat
 
 
 def test_indexer_finds_all_titles(tmp_path):
@@ -58,14 +52,14 @@ def test_indexer_finds_all_titles(tmp_path):
     assert "Knowledge Graphs" in index
 
 
-def test_link_injected_on_first_occurrence(mock_anthropic, tmp_path):
+def test_link_injected_on_first_occurrence(mock_chat, tmp_path):
     _make_vault(tmp_path, {"RAG.md": "# RAG\n\nretrieval augmented generation"})
     inbox = tmp_path / "00 - Inbox"
     inbox.mkdir()
     note_path = inbox / "Intro to AI.md"
     note_path.write_text(_make_note_content("Intro to AI", "RAG is great. RAG stands for..."))
 
-    mock_anthropic.messages.create.return_value = _mock_links(["RAG"])
+    mock_chat.return_value = _mock_links(["RAG"])
     run([str(note_path)], str(tmp_path))
 
     content = note_path.read_text()
@@ -73,7 +67,7 @@ def test_link_injected_on_first_occurrence(mock_anthropic, tmp_path):
     assert _note_body(content).count("[[RAG]]") == 1
 
 
-def test_no_self_reference(mock_anthropic, tmp_path):
+def test_no_self_reference(mock_chat, tmp_path):
     inbox = tmp_path / "00 - Inbox"
     inbox.mkdir()
     note_path = inbox / "RAG.md"
@@ -83,10 +77,10 @@ def test_no_self_reference(mock_anthropic, tmp_path):
 
     assert count == 0
     assert "[[RAG]]" not in note_path.read_text()
-    mock_anthropic.messages.create.assert_not_called()
+    mock_chat.assert_not_called()
 
 
-def test_no_duplicate_links_in_body(mock_anthropic, tmp_path):
+def test_no_duplicate_links_in_body(mock_chat, tmp_path):
     _make_vault(tmp_path, {"Embeddings.md": "# Embeddings\n\nvector representations"})
     inbox = tmp_path / "00 - Inbox"
     inbox.mkdir()
@@ -95,13 +89,13 @@ def test_no_duplicate_links_in_body(mock_anthropic, tmp_path):
         _make_note_content("RAG", "Embeddings are used in RAG. Embeddings represent text.")
     )
 
-    mock_anthropic.messages.create.return_value = _mock_links(["Embeddings"])
+    mock_chat.return_value = _mock_links(["Embeddings"])
     run([str(note_path)], str(tmp_path))
 
     assert _note_body(note_path.read_text()).count("[[Embeddings]]") == 1
 
 
-def test_connections_section_filled(mock_anthropic, tmp_path):
+def test_connections_section_filled(mock_chat, tmp_path):
     _make_vault(
         tmp_path,
         {
@@ -114,7 +108,7 @@ def test_connections_section_filled(mock_anthropic, tmp_path):
     note_path = inbox / "Vector Search.md"
     note_path.write_text(_make_note_content("Vector Search", "RAG uses Embeddings for retrieval."))
 
-    mock_anthropic.messages.create.return_value = _mock_links(["RAG", "Embeddings"])
+    mock_chat.return_value = _mock_links(["RAG", "Embeddings"])
     run([str(note_path)], str(tmp_path))
 
     content = note_path.read_text()
@@ -123,7 +117,7 @@ def test_connections_section_filled(mock_anthropic, tmp_path):
     assert "<!-- filled by Linker -->" not in content
 
 
-def test_no_possible_links_does_not_fail(mock_anthropic, tmp_path):
+def test_no_possible_links_does_not_fail(mock_chat, tmp_path):
     inbox = tmp_path / "00 - Inbox"
     inbox.mkdir()
     note_path = inbox / "Unrelated Note.md"
@@ -135,21 +129,19 @@ def test_no_possible_links_does_not_fail(mock_anthropic, tmp_path):
 
     assert count == 0
     assert "<!-- filled by Linker -->" in note_path.read_text()
-    mock_anthropic.messages.create.assert_not_called()
+    mock_chat.assert_not_called()
 
 
-def test_detect_links_retries_on_bad_json(mock_anthropic, tmp_path):
+def test_detect_links_retries_on_bad_json(mock_chat, tmp_path):
     _make_vault(tmp_path, {"RAG.md": "# RAG\n\ncontent"})
     inbox = tmp_path / "00 - Inbox"
     inbox.mkdir()
     note_path = inbox / "Intro.md"
     note_path.write_text(_make_note_content("Intro", "RAG is a retrieval technique."))
 
-    bad = MagicMock()
-    bad.content = [anthropic.types.TextBlock(type="text", text="not json at all")]
-    mock_anthropic.messages.create.side_effect = [bad, _mock_links(["RAG"])]
+    mock_chat.side_effect = ["not json at all", _mock_links(["RAG"])]
 
     run([str(note_path)], str(tmp_path))
 
-    assert mock_anthropic.messages.create.call_count == 2
+    assert mock_chat.call_count == 2
     assert "[[RAG]]" in note_path.read_text()

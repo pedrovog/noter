@@ -4,10 +4,9 @@ import re
 from json import JSONDecodeError
 from pathlib import Path
 
-import anthropic
-
 from noter.config import LINKER_MODEL
 from noter.exceptions import LinkerError
+from noter.llm import chat
 
 logger = logging.getLogger(__name__)
 
@@ -66,25 +65,19 @@ def _filter_candidates(body: str, index: dict[str, str], self_path: str) -> list
     ]
 
 
-def _detect_links(
-    body: str, candidates: list[str], client: anthropic.Anthropic, note_name: str = ""
-) -> list[str]:
+def _detect_links(body: str, candidates: list[str], note_name: str = "") -> list[str]:
     if not candidates:
         return []
     title_list = "\n".join(f"- {t}" for t in candidates)
     user_message = f"Note body:\n{body}\n\nCandidate vault titles:\n{title_list}"
 
     for attempt in range(2):
-        message = client.messages.create(
+        raw = chat(
+            system=_SYSTEM_PROMPT,
+            user=user_message,
             model=LINKER_MODEL,
             max_tokens=512,
-            system=_SYSTEM_PROMPT,
-            messages=[{"role": "user", "content": user_message}],
-        )
-        block = message.content[0]
-        if not isinstance(block, anthropic.types.TextBlock):
-            raise LinkerError(f"Unexpected content block type: {type(block).__name__}")
-        raw = block.text.strip()
+        ).strip()
         start, end = raw.find("{"), raw.rfind("}")
         if start != -1 and end != -1:
             raw = raw[start : end + 1]
@@ -97,7 +90,7 @@ def _detect_links(
         except (JSONDecodeError, ValueError) as exc:
             if attempt == 1:
                 logger.warning(
-                    "Linker: Claude returned invalid JSON for note %r after 2 attempts: %s",
+                    "Linker: LLM returned invalid JSON for note %r after 2 attempts: %s",
                     note_name,
                     exc,
                 )
@@ -146,7 +139,6 @@ def run(note_paths: list[str], vault_path: str) -> int:
         raise LinkerError(f"Failed to build vault index: {exc}") from exc
 
     logger.debug("Linker: indexed %d vault note(s)", len(index))
-    client = anthropic.Anthropic()
     total = 0
 
     for note_path_str in note_paths:
@@ -159,7 +151,7 @@ def run(note_paths: list[str], vault_path: str) -> int:
         frontmatter, body = _parse_note(content)
         candidates = _filter_candidates(body, index, str(note_path.resolve()))
         logger.debug("Linker: note %s has %d candidate(s)", note_path.name, len(candidates))
-        titles_to_link = _detect_links(body, candidates, client, note_name=note_path.name)
+        titles_to_link = _detect_links(body, candidates, note_name=note_path.name)
 
         if not titles_to_link:
             continue
