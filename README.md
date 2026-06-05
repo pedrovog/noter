@@ -14,12 +14,13 @@
 
 ## What It Does
 
-noter accepts a topic string, autonomously searches the web, scrapes and synthesizes multiple sources, and writes one or more structured `.md` notes directly into your Obsidian vault's `00 - Inbox/` folder. What normally takes 30–60 minutes of manual research, reading, and writing is reduced to a single CLI invocation.
+noter accepts a topic string, autonomously searches the web, scrapes and synthesizes multiple sources, and writes one or more structured `.md` notes directly into your Obsidian vault's `noter/` folder. What normally takes 30–60 minutes of manual research, reading, and writing is reduced to a single CLI invocation.
 
-Each generated note includes a YAML frontmatter block, a structured body organized by subtopics, a sources section, and `[[wikilinks]]` to related notes already in your vault. Notes land in `00 - Inbox/` for human review — noter never edits existing vault content.
+Each generated note includes a YAML frontmatter block, a structured body organized by subtopics, a sources section, and `[[wikilinks]]` to related notes already in your vault. Notes land in the inbox folder for human review — noter never edits existing vault content.
 
 ## Features
 
+- Any LLM provider via [LiteLLM](https://github.com/BerriAI/litellm) — Anthropic (default), OpenAI, Gemini, DeepSeek, or local models (Ollama, vLLM, LM Studio); selectable globally or per agent
 - Parallel search across Firecrawl, arXiv, and Wikipedia
 - SQLite-backed URL cache with configurable TTL — re-running the same topic within the window skips all network calls
 - Multi-note generation for broad topics — the Planner decides how many notes a topic warrants
@@ -60,7 +61,7 @@ Copy `.env.example` to `.env` and fill in the required values.
 | `FIRECRAWL_API_KEY` | Firecrawl API key for web search and scraping |
 | `VAULT_PATH` | Absolute path to your Obsidian vault root directory |
 
-`VAULT_PATH` must point to an existing directory. noter writes notes to `$VAULT_PATH/00 - Inbox/` (configurable via `--inbox` / `NOTER_INBOX`) and reads all other `.md` files in the vault to find `[[wikilink]]` candidates.
+`VAULT_PATH` must point to an existing directory. noter writes notes to `$VAULT_PATH/noter/` (configurable via `--inbox` / `NOTER_INBOX`) and reads all other `.md` files in the vault to find `[[wikilink]]` candidates.
 
 ### Optional — Output folder
 
@@ -101,6 +102,8 @@ NOTER_API_BASE=http://localhost:11434
 ```
 
 The same `NOTER_API_BASE` mechanism works for any OpenAI-compatible local server (vLLM, LM Studio, text-generation-inference). Note: smaller local models produce less reliable structured JSON; noter retries once per call but very small models may still struggle.
+
+> noter requests JSON output and disables model "thinking" (`reasoning_effort="none"`) so reasoning models like Gemini 2.5 Flash don't spend the response budget on chain-of-thought and truncate the JSON. Providers that don't support the setting ignore it.
 
 ## Usage
 
@@ -167,7 +170,7 @@ A typical run prints one line per pipeline stage:
 [Writer]       RAG Overview.md | RAG Architectures.md
 [Linker]       5 link(s) injected
 
-Done. 2 note(s) in 00 - Inbox/ awaiting review.
+Done. 2 note(s) in noter/ awaiting review.
 ```
 
 ## Architecture
@@ -176,12 +179,12 @@ noter is a sequential pipeline of five independent agents. The orchestrator is t
 
 ```
 cli.py
-  └─ orchestrator.run(topic, vault_path, user_urls, n_sources, cache_ttl, no_cache, no_search, quiet)
-       ├─ planner.run(topic)               → PlannerOutput
-       ├─ searcher.run(plan, user_urls, …) → list[SourceResult]
-       ├─ synthesizer.run(plan, sources)   → list[SynthesizedNote]
-       ├─ writer.run(synth_notes, vault)   → list[str]   # absolute paths
-       └─ linker.run(note_paths, vault)    → int         # links injected
+  └─ orchestrator.run(topic, vault_path, user_urls, n_sources, cache_ttl, no_cache, no_search, inbox, quiet)
+       ├─ planner.run(topic)                    → PlannerOutput
+       ├─ searcher.run(plan, user_urls, …)      → list[SourceResult]
+       ├─ synthesizer.run(plan, sources)        → list[SynthesizedNote]
+       ├─ writer.run(synth_notes, vault, inbox) → list[str]   # absolute paths
+       └─ linker.run(note_paths, vault)         → int         # links injected
 ```
 
 ### Agents
@@ -191,7 +194,7 @@ cli.py
 | Planner | Decides how many notes to write, what subtopics each covers, and generates search queries |
 | Searcher | Fetches sources via Firecrawl search, arXiv, and Wikipedia in parallel; serves cache hits first |
 | Synthesizer | Sends scraped content to the LLM and produces structured note drafts per `NoteSpec` |
-| Writer | Renders drafts as `.md` files with YAML frontmatter; writes to `VAULT_PATH/00 - Inbox/` |
+| Writer | Renders drafts as `.md` files with YAML frontmatter; writes to `VAULT_PATH/<inbox>/` (default `noter/`) and infers tags |
 | Linker | Scans the vault for existing note titles and injects `[[wikilinks]]` into new notes in-place |
 
 ### Searcher Parallelism
@@ -285,7 +288,7 @@ These are intentional constraints, not missing features:
 | CLI only — no web UI, no API server | Single-user local tool |
 | No Docker or containerization | Zero-infrastructure local install |
 | SQLite only — no Redis, no Postgres | No external services required |
-| Write-once to `00 - Inbox/` — no editing existing notes | Notes are for human review; automated overwriting is out of scope |
+| Write-once to the inbox folder — no editing existing notes | Notes are for human review; automated overwriting is out of scope |
 | No streaming LLM responses | Batch pipeline; all LLM output is structured JSON |
 | Firecrawl only for scraping | No Playwright, Selenium, or custom crawlers |
 | No semantic search or vector embeddings | Out of scope |
