@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-06-05
+
 ### Added
 - `.github/workflows/ci.yml` — CI pipeline running `ruff check` and `pytest` on every push and PR
 - `.pre-commit-config.yaml` — pre-commit hooks for `ruff check --fix`, `ruff-format`, and `mypy` (local hook via `uv run mypy src/noter/`)
@@ -58,5 +60,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `pyproject.toml` project metadata and `uv` dependency management
 - Project logo and README
 
-[Unreleased]: https://github.com/pedrovog/noter/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/pedrovog/noter/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/pedrovog/noter/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/pedrovog/noter/releases/tag/v0.1.0
